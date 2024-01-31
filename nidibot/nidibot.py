@@ -169,7 +169,6 @@ class Nidibot:
             name="stop",
             description="Stops server if it is online.",
         )
-        @self.__bot.command()
         async def stop(ctx):
             logging.debug("Called '%s' by '%s'.", __name__, ctx.message.author)
 
@@ -200,7 +199,6 @@ class Nidibot:
             name="restart",
             description="Restarts server if it is online, starts server if it is offline.",
         )
-        @self.__bot.command()
         async def restart(ctx):
             logging.debug("Called '%s' by '%s'.", __name__, ctx.message.author)
 
@@ -231,7 +229,6 @@ class Nidibot:
             name="backup",
             description="Creates backup of games server files and uploads them to storage.",
         )
-        @self.__bot.command()
         async def backup(ctx):
             logging.debug("Called 'backup' by '%s'.", ctx.message.author)
 
