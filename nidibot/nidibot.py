@@ -63,8 +63,17 @@ class Nidibot:
 
         self.__discord_intents = discord.Intents.default()
         self.__discord_intents.message_content = True
-        self.__discord_intents.reactions = True
+        self.__discord_intents.members = True
         self.__bot = commands.Bot(command_prefix="/", intents=self.__discord_intents)
+
+        @self.__bot.event
+        async def on_ready():
+            logging.debug("Starting the bot.")
+            logging.debug("Bot is logged in as '%s' user.", self.__bot.user.name)
+
+            logging.debug("Waiting for command tree sync.")
+            await self.__bot.tree.sync()
+            logging.debug("Command tree sync is completed.")
 
         @self.__bot.command(
             name="status",
