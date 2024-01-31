@@ -13,33 +13,38 @@ You need to have following before you proceed with the instructions:
 ## Installation
 
 1. Login to your VM or server via SSH.
-2. Install Python 3.x from <https://www.python.org/downloads/>.
+2. Install Python 3.x from <https://www.python.org/downloads/> or via following command (only if it is missing or very old):
+
+```bash
+sudo add-apt-repository ppa:deadsnakes/ppa -y && sudo apt update && sudo apt install python3.12 -y && sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
+```
+
 3. Install following packages (Ubuntu/Linux only):
 
 ```bash
 sudo apt install libffi-dev libnacl-dev python3-dev -y
 ```
 
-5. Install Discord Python package:
+4. Install Discord Python package:
 
 ```bash
 pip install -U discord.py
 ```
 
-6. In case if you meet "**externally-managed-environment**" error under Python 3.11 version, then run following command:
+5. In case if you meet "**externally-managed-environment**" error under Python 3.11 version, then run following command:
 
 ```bash
 # Ubuntu/Linux only.
 sudo mv /usr/lib/python3.11/EXTERNALLY-MANAGED /usr/lib/python3.11/EXTERNALLY-MANAGED.old
 ```
 
-7. Install this bot as Python package via pip:
+6. Install this bot as Python package via pip:
 
 ```bash
 pip install nidibot
 ```
 
-8. Or upgrade already installed bot:
+7. Or upgrade already installed bot:
 
 ```bash
 pip install nidibot --upgrade
