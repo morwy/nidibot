@@ -22,11 +22,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install build
 
-    # - name: Get changelog since last release
-    #   id: changelog
-    #   uses: metcalfc/changelog-generator@v4.3.0
-    #   with:
-    #     myToken: ${{ secrets.GITHUB_TOKEN }}
+    - name: Get changelog since last release
+      id: changelog
+      uses: metcalfc/changelog-generator@v4.3.0
+      with:
+        myToken: ${{ secrets.GITHUB_TOKEN }}
   
     - name: Increase package version
       id: version
@@ -36,7 +36,9 @@ jobs:
         DESTINATION_BRANCH: main
         MESSAGE: Increased package version
       run: |
-        NEW_VERSION=$(grep version setup.cfg | cut -d '=' -f2 | xargs)
+        OLD_VERSION=$(grep version setup.cfg | cut -d '=' -f2 | xargs)
+        NEW_VERSION=$(echo $OLD_VERSION | awk -F. -v OFS=. 'NF==1{print ++$NF}; NF>1{if(length($NF+1)>length($NF))$(NF-1)++; $NF=sprintf("%0*d", length($NF), ($NF+1)%(10^length($NF))); print}')
+        sed -i -e "s/$OLD_VERSION/$NEW_VERSION/g" setup.cfg
         echo "NEW_TAG_NAME=$NEW_VERSION" >> $GITHUB_OUTPUT
         export SHA=$( git rev-parse $DESTINATION_BRANCH:$FILE_TO_COMMIT )
         export CONTENT=$( base64 -i $FILE_TO_COMMIT )
@@ -54,7 +56,7 @@ jobs:
       uses: ncipollo/release-action@v1
       with:
         artifacts: "dist/nidibot-*.tar.gz, dist/nidibot-*.whl"
-        # body: "${{ steps.changelog.outputs.changelog }}"
+        body: "${{ steps.changelog.outputs.changelog }}"
         tag: "v${{ steps.version.outputs.NEW_TAG_NAME }}"
 
     - name: Publish package to PyPI
