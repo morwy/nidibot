@@ -22,11 +22,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install build
 
-    - name: Get changelog since last release
-      id: changelog
-      uses: metcalfc/changelog-generator@v4.3.0
-      with:
-        myToken: ${{ secrets.GITHUB_TOKEN }}
+    # - name: Get changelog since last release
+    #   id: changelog
+    #   uses: metcalfc/changelog-generator@v4.3.0
+    #   with:
+    #     myToken: ${{ secrets.GITHUB_TOKEN }}
   
     - name: Increase package version
       id: version
@@ -54,7 +54,7 @@ jobs:
       uses: ncipollo/release-action@v1
       with:
         artifacts: "dist/nidibot-*.tar.gz, dist/nidibot-*.whl"
-        body: "${{ steps.changelog.outputs.changelog }}"
+        # body: "${{ steps.changelog.outputs.changelog }}"
         tag: "v${{ steps.version.outputs.NEW_TAG_NAME }}"
 
     - name: Publish package to PyPI
