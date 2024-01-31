@@ -82,3 +82,15 @@ python3 -c 'from nidibot import Nidibot; Nidibot.initialize_folder()'
     "discord_admin_users": []
 }
 ```
+
+7. Install **nidibot** service, so it will start automatically every system restart.
+
+```bash
+sudo cp nidibot.service /etc/systemd/system/nidibot.service && sudo systemctl daemon-reload && sudo systemctl enable nidibot.service
+```
+
+8. Start newly installed service:
+
+```bash
+sudo systemctl start nidibot.service
+```
