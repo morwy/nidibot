@@ -63,9 +63,13 @@ class Nidibot:
 
         self.__discord_intents = discord.Intents.default()
         self.__discord_intents.message_content = True
+        self.__discord_intents.reactions = True
         self.__bot = commands.Bot(command_prefix="/", intents=self.__discord_intents)
 
-        @self.__bot.command()
+        @self.__bot.command(
+            name="status",
+            description="Provides extended information about game server status.",
+        )
         async def status(ctx):
             logging.debug("Called '%s' by '%s'.", __name__, ctx.message.author)
 
@@ -131,7 +135,10 @@ class Nidibot:
 
             await ctx.channel.send(embed=embed)
 
-        @self.__bot.command()
+        @self.__bot.command(
+            name="start",
+            description="Starts server if it is offline, restarts server if it is online.",
+        )
         async def start(ctx):
             logging.debug("Called '%s' by '%s'.", __name__, ctx.message.author)
 
@@ -158,6 +165,10 @@ class Nidibot:
 
             self.__nitrado.start()
 
+        @self.__bot.command(
+            name="stop",
+            description="Stops server if it is online.",
+        )
         @self.__bot.command()
         async def stop(ctx):
             logging.debug("Called '%s' by '%s'.", __name__, ctx.message.author)
@@ -185,6 +196,10 @@ class Nidibot:
 
             self.__nitrado.stop()
 
+        @self.__bot.command(
+            name="restart",
+            description="Restarts server if it is online, starts server if it is offline.",
+        )
         @self.__bot.command()
         async def restart(ctx):
             logging.debug("Called '%s' by '%s'.", __name__, ctx.message.author)
@@ -212,6 +227,10 @@ class Nidibot:
 
             self.__nitrado.restart()
 
+        @self.__bot.command(
+            name="backup",
+            description="Creates backup of games server files and uploads them to storage.",
+        )
         @self.__bot.command()
         async def backup(ctx):
             logging.debug("Called 'backup' by '%s'.", ctx.message.author)
