@@ -1,0 +1,64 @@
+name: Create and publish release
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+        contents: write
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.12'
+        architecture: x64
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build
+
+    - name: Get changelog since last release
+      id: changelog
+      uses: metcalfc/changelog-generator@v4.1.0
+      with:
+        myToken: ${{ secrets.GITHUB_TOKEN }}
+  
+    - name: Increase package version
+      id: version
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        FILE_TO_COMMIT: setup.cfg
+        DESTINATION_BRANCH: main
+        MESSAGE: Increased package version
+      run: |
+        NEW_VERSION=$(grep version setup.cfg | cut -d '=' -f2 | xargs)
+        echo "NEW_TAG_NAME=$NEW_VERSION" >> $GITHUB_OUTPUT
+        export SHA=$( git rev-parse $DESTINATION_BRANCH:$FILE_TO_COMMIT )
+        export CONTENT=$( base64 -i $FILE_TO_COMMIT )
+        gh api --method PUT /repos/:owner/:repo/contents/$FILE_TO_COMMIT \
+          --field message="$MESSAGE" \
+          --field content="$CONTENT" \
+          --field encoding="base64" \
+          --field branch="$DESTINATION_BRANCH" \
+          --field sha="$SHA"
+
+    - name: Build package
+      run: python -m build
+  
+    - name: Create release entry
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: "dist/nidibot-*.tar.gz, dist/nidibot-*.whl"
+        body: "${{ steps.changelog.outputs.changelog }}"
+        tag: "v${{ steps.version.outputs.NEW_TAG_NAME }}"
+
+    - name: Publish package to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_API_TOKEN }}

@@ -1,0 +1,7 @@
+{
+    "connection": {
+        "discord_bot_token": "your-discord-bot-token",
+        "nitrado_api_token": "your-nitrado-api-token"
+    },
+    "discord_admin_users": []
+}
