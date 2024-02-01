@@ -1,3 +1,8 @@
+# Manually added entries.
+logs/*
+bot_configuration.json
+start_bot.py
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

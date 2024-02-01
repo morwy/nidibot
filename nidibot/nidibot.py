@@ -11,8 +11,8 @@ import shutil
 from logging.handlers import TimedRotatingFileHandler
 
 from dacite import from_dict
-import discord
-from discord.ext import commands
+import hikari
+import lightbulb
 
 from nidibot.nitrado import Nitrado
 
@@ -59,45 +59,47 @@ class Nidibot:
 
         self.__configuration = self.__parse_configuration_json_file()
 
-        self.__nitrado = Nitrado(self.__configuration.connection.nitrado_api_token)
+        self.__gameserver = Nitrado(self.__configuration.connection.nitrado_api_token)
 
-        self.__discord_intents = discord.Intents.default()
-        self.__discord_intents.message_content = True
-        self.__discord_intents.members = True
-        self.__bot = commands.Bot(command_prefix="/", intents=self.__discord_intents)
+        self.__bot = lightbulb.BotApp(
+            token=self.__configuration.connection.discord_bot_token
+        )
 
-        @self.__bot.event
-        async def on_ready():
+        @self.__bot.listen(hikari.StartedEvent)
+        async def on_started(_) -> None:
             logging.debug("Starting the bot.")
-            logging.debug("Bot is logged in as '%s' user.", self.__bot.user.name)
+            # logging.debug("Bot is logged in as '%s' user.", self.__bot.user.name)
 
             logging.debug("Waiting for command tree sync.")
-            await self.__bot.tree.sync()
+            # await self.__bot.tree.sync()
             logging.debug("Command tree sync is completed.")
 
-        @self.__bot.command(
+        @self.__bot.command
+        @lightbulb.command(
             name="status",
             description="Provides extended information about game server status.",
         )
-        async def status(ctx):
-            logging.debug("Called '%s' by '%s'.", __name__, ctx.message.author)
+        @lightbulb.implements(lightbulb.SlashCommand)
+        async def status(ctx) -> None:
+            logging.debug("Called 'status' by '%s'.", ctx.author)
 
-            server_status = self.__nitrado.get_status()
+            server_status = self.__gameserver.get_status()
 
             title = f"{server_status.game_name}"
             if server_status.game_version:
                 title += f" ({server_status.game_version})"
 
-            status_smiley = ":white_check_mark:"
-            status_color = discord.Color.green()
-            if server_status.status == "offline":
+            if server_status.status == "online":
+                status_smiley = ":white_check_mark:"
+                status_color = hikari.colors.Color(0x37CB78)
+            elif server_status.status == "offline":
                 status_smiley = ":no_entry:"
-                status_color = discord.Color.red()
+                status_color = hikari.colors.Color(0xE64A42)
             elif server_status.status == "restarting":
                 status_smiley = ":warning:"
-                status_color = discord.Color.orange()
+                status_color = hikari.colors.Color(0xE67E22)
 
-            embed = discord.Embed(
+            embed = hikari.Embed(
                 title=title,
                 color=status_color,
             )
@@ -142,125 +144,114 @@ class Nidibot:
                 inline=True,
             )
 
-            await ctx.channel.send(embed=embed)
+            await ctx.respond(embed=embed)
 
-        @self.__bot.command(
+        @self.__bot.command
+        @lightbulb.command(
             name="start",
             description="Starts server if it is offline, restarts server if it is online.",
         )
-        async def start(ctx):
-            logging.debug("Called '%s' by '%s'.", __name__, ctx.message.author)
+        @lightbulb.implements(lightbulb.SlashCommand)
+        async def start(ctx) -> None:
+            logging.debug("Called 'start' by '%s'.", ctx.author)
 
-            user = ctx.message.author.name
+            user = str(ctx.author)
             if user not in self.__configuration.discord_admin_users:
-                embed = discord.Embed(
-                    color=discord.Color.red(),
+                embed = hikari.Embed(
+                    description="Sorry but you don't have rights to call this command! :liar:",
+                    color=hikari.colors.Color(0xE64A42),
                 )
-                embed.add_field(
-                    name="",
-                    value="Sorry but you don't have rights to call this command! :liar:",
-                )
-                await ctx.channel.send(embed=embed)
+
+                await ctx.respond(embed=embed)
                 return
 
-            embed = discord.Embed(
-                color=discord.Color.red(),
+            embed = hikari.Embed(
+                description=":warning: Starting server! :warning:",
+                color=hikari.colors.Color(0xE64A42),
             )
-            embed.add_field(
-                name="",
-                value=":warning: Starting server! :warning:",
-            )
-            await ctx.channel.send(embed=embed)
+            await ctx.respond(embed=embed)
 
-            self.__nitrado.start()
+            self.__gameserver.start()
 
-        @self.__bot.command(
+        @self.__bot.command
+        @lightbulb.command(
             name="stop",
             description="Stops server if it is online.",
         )
-        async def stop(ctx):
-            logging.debug("Called '%s' by '%s'.", __name__, ctx.message.author)
+        @lightbulb.implements(lightbulb.SlashCommand)
+        async def stop(ctx) -> None:
+            logging.debug("Called 'stop' by '%s'.", ctx.author)
 
-            user = ctx.message.author.name
+            user = str(ctx.author)
             if user not in self.__configuration.discord_admin_users:
-                embed = discord.Embed(
-                    color=discord.Color.red(),
+                embed = hikari.Embed(
+                    description="Sorry but you don't have rights to call this command! :liar:",
+                    color=hikari.colors.Color(0xE64A42),
                 )
-                embed.add_field(
-                    name="",
-                    value="Sorry but you don't have rights to call this command! :liar:",
-                )
-                await ctx.channel.send(embed=embed)
+
+                await ctx.respond(embed=embed)
                 return
 
-            embed = discord.Embed(
-                color=discord.Color.red(),
+            embed = hikari.Embed(
+                description=":warning: Stopping server! :warning:",
+                color=hikari.colors.Color(0xE64A42),
             )
-            embed.add_field(
-                name="",
-                value=":warning: Stopping server! :warning:",
-            )
-            await ctx.channel.send(embed=embed)
+            await ctx.respond(embed=embed)
 
-            self.__nitrado.stop()
+            self.__gameserver.stop()
 
-        @self.__bot.command(
+        @self.__bot.command
+        @lightbulb.command(
             name="restart",
             description="Restarts server if it is online, starts server if it is offline.",
         )
-        async def restart(ctx):
-            logging.debug("Called '%s' by '%s'.", __name__, ctx.message.author)
+        @lightbulb.implements(lightbulb.SlashCommand)
+        async def restart(ctx) -> None:
+            logging.debug("Called 'restart' by '%s'.", ctx.author)
 
-            user = ctx.message.author.name
+            user = str(ctx.author)
             if user not in self.__configuration.discord_admin_users:
-                embed = discord.Embed(
-                    color=discord.Color.red(),
+                embed = hikari.Embed(
+                    description="Sorry but you don't have rights to call this command! :liar:",
+                    color=hikari.colors.Color(0xE64A42),
                 )
-                embed.add_field(
-                    name="",
-                    value="Sorry but you don't have rights to call this command! :liar:",
-                )
-                await ctx.channel.send(embed=embed)
+
+                await ctx.respond(embed=embed)
                 return
 
-            embed = discord.Embed(
-                color=discord.Color.red(),
+            embed = hikari.Embed(
+                description=":warning: Restarting server! :warning:",
+                color=hikari.colors.Color(0xE64A42),
             )
-            embed.add_field(
-                name="",
-                value=":warning: Restarting server! :warning:",
-            )
-            await ctx.channel.send(embed=embed)
+            await ctx.respond(embed=embed)
 
-            self.__nitrado.restart()
+            self.__gameserver.restart()
 
-        @self.__bot.command(
+        @self.__bot.command
+        @lightbulb.command(
             name="backup",
             description="Creates backup of games server files and uploads them to storage.",
         )
-        async def backup(ctx):
-            logging.debug("Called 'backup' by '%s'.", ctx.message.author)
+        @lightbulb.implements(lightbulb.SlashCommand)
+        async def backup(ctx) -> None:
+            logging.debug("Called 'backup' by '%s'.", ctx.author)
 
-            user = ctx.message.author.name
+            user = str(ctx.author)
             if user not in self.__configuration.discord_admin_users:
-                embed = discord.Embed(
-                    color=discord.Color.red(),
+                embed = hikari.Embed(
+                    description="Sorry but you don't have rights to call this command! :liar:",
+                    color=hikari.colors.Color(0xE64A42),
                 )
-                embed.add_field(
-                    name="",
-                    value="Sorry but you don't have rights to call this command! :liar:",
-                )
-                await ctx.channel.send(embed=embed)
+
+                await ctx.respond(embed=embed)
                 return
 
-            embed = discord.Embed(
-                color=discord.Color.red(),
+            embed = hikari.Embed(
+                description=":no_entry: This command is not yet implemented! :no_entry:",
+                color=hikari.colors.Color(0xE64A42),
             )
-            embed.add_field(
-                name="",
-                value=":no_entry: This command is not yet implemented! :no_entry:",
-            )
-            await ctx.channel.send(embed=embed)
+
+            await ctx.respond(embed=embed)
 
     def __parse_configuration_json_file(self) -> NidibotConfiguration:
         configuration_filepath = os.path.join(
@@ -278,7 +269,7 @@ class Nidibot:
         return configuration
 
     @staticmethod
-    def initialize_folder():
+    def initialize_folder() -> None:
         """ """
         current_script_folder = os.path.dirname(os.path.realpath(__file__))
         current_working_folder = os.getcwd()
@@ -295,5 +286,5 @@ class Nidibot:
                 dirs_exist_ok=True,
             )
 
-    def activate(self):
-        self.__bot.run(self.__configuration.connection.discord_bot_token)
+    def activate(self) -> None:
+        self.__bot.run()

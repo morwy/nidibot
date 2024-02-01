@@ -1,5 +1,7 @@
 # Nitrado Discord bot
 
+[![Supported Versions](https://img.shields.io/pypi/pyversions/nidibot.svg)](https://pypi.org/project/nidibot) [![PyPi Versions](https://img.shields.io/pypi/v/nidibot)](https://pypi.org/project/nidibot) [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) [![License](https://img.shields.io/pypi/l/nidibot.svg)](https://pypi.python.org/pypi/nidibot/)
+
 ## Prerequisites
 
 You need to have following before you proceed with the instructions:
@@ -13,50 +15,18 @@ You need to have following before you proceed with the instructions:
 ## Installation
 
 1. Login to your VM or server via SSH.
-2. Install Python 3.x from <https://www.python.org/downloads/> or via following command (only if it is missing or very old):
-
-```bash
-sudo add-apt-repository ppa:deadsnakes/ppa -y && sudo apt update && sudo apt install python3.12 -y && sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
-```
-
-3. Install following packages (Ubuntu/Linux only):
-
-```bash
-sudo apt install libffi-dev libnacl-dev python3-dev -y
-```
-
-4. Install Discord Python package:
-
-```bash
-pip install -U discord.py
-```
-
-5. In case if you meet "**externally-managed-environment**" error under Python 3.11 version, then run following command:
-
-```bash
-# Ubuntu/Linux only.
-sudo mv /usr/lib/python3.11/EXTERNALLY-MANAGED /usr/lib/python3.11/EXTERNALLY-MANAGED.old
-```
-
-6. Install this bot as Python package via pip:
+2. Install Python 3.x. Do this only if Python is missing or very old. You don't need to have latest Python version for this bot.
+3. Install this bot as Python package via pip:
 
 ```bash
 pip install nidibot
 ```
 
-7. Or upgrade already installed bot:
+4. Or upgrade already installed bot:
 
 ```bash
 pip install nidibot --upgrade
 ```
-
-<details>
-<summary><b>References used (click to show):</b></summary>
-<ul>
-<li><a href="https://discordpy.readthedocs.io/en/latest/intro.html">https://discordpy.readthedocs.io/en/latest/intro.html</a></li>
-<li><a href="https://stackoverflow.com/questions/75608323/how-do-i-solve-error-externally-managed-environment-every-time-i-use-pip-3">https://stackoverflow.com/questions/75608323/how-do-i-solve-error-externally-managed-environment-every-time-i-use-pip-3</a></li>
-</ul>
-</details>
 
 ## Configuration
 
@@ -67,7 +37,7 @@ pip install nidibot --upgrade
 
 ```bash
 # Ubuntu/Linux only.
-python3 -c 'from nidibot import Nidibot; Nidibot.initialize_folder()'
+python3 -c 'from nidibot.nidibot import Nidibot; Nidibot.initialize_folder()'
 ```
 
 5. Following files should appear.
@@ -93,4 +63,10 @@ sudo cp nidibot.service /etc/systemd/system/nidibot.service && sudo systemctl da
 
 ```bash
 sudo systemctl start nidibot.service
+```
+
+9. Check service status:
+
+```bash
+sudo systemctl status nidibot.service
 ```
