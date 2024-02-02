@@ -30,10 +30,12 @@ class ControllerConfiguration:
         default_factory=DiscordControllerConfiguration
     )
 
+
 @dataclass
 class ServerProviderConfiguration:
     type: str = ""
     token: str = ""
+
 
 @dataclass
 class StorageConfiguration:
@@ -62,11 +64,7 @@ class Nidibot:
         pathlib.Path(backup_directory).mkdir(parents=True, exist_ok=True)
 
         self.__configuration = self.__parse_configuration_json_file()
-
-        self.__gameserver = Nitrado(
-            self.__configuration.server_provider[0].token, backup_directory
-        )
-
+        self.__server_providers = self.__initialize_server_providers(backup_directory)
         self.__discord_bot = self.__initialize_discord_bot()
 
     def __initialize_logging(self) -> None:
@@ -108,6 +106,21 @@ class Nidibot:
 
         return configuration
 
+    def __initialize_server_providers(self, backup_directory: str) -> list:
+        server_providers: list = []
+
+        for server_provider_configuration in self.__configuration.server_provider:
+            if server_provider_configuration.type == "nitrado":
+                server_provider = Nitrado(
+                    server_provider_configuration.token, backup_directory
+                )
+                server_providers.append(server_provider)
+
+        if len(server_providers) == 0:
+            raise ValueError("At least one server provider is required!")
+
+        return server_providers
+
     def __initialize_discord_bot(self) -> lightbulb.BotApp:
         token = self.__configuration.controller.discord.token
         privileged_users = self.__configuration.controller.discord.privileged_users
@@ -127,7 +140,7 @@ class Nidibot:
         async def status(ctx) -> None:
             logging.debug("Called 'status' by '%s'.", ctx.author)
 
-            server_status = self.__gameserver.get_status()
+            server_status = self.__server_providers[0].get_status()
 
             title = f"{server_status.game_name}"
             if server_status.game_version:
@@ -218,7 +231,7 @@ class Nidibot:
             )
             await ctx.respond(embed=embed)
 
-            self.__gameserver.start()
+            self.__server_providers[0].start()
 
         @bot.command
         @lightbulb.command(
@@ -245,7 +258,7 @@ class Nidibot:
             )
             await ctx.respond(embed=embed)
 
-            self.__gameserver.stop()
+            self.__server_providers[0].stop()
 
         @bot.command
         @lightbulb.command(
@@ -272,7 +285,7 @@ class Nidibot:
             )
             await ctx.respond(embed=embed)
 
-            self.__gameserver.restart()
+            self.__server_providers[0].restart()
 
         @bot.command
         @lightbulb.command(
@@ -299,7 +312,7 @@ class Nidibot:
             )
             await ctx.respond(embed=embed)
 
-            if self.__gameserver.download_files():
+            if self.__server_providers[0].download_files():
                 embed = hikari.Embed(
                     description=":white_check_mark: Backup was created successfully!",
                     color=hikari.colors.Color(0x37CB78),
