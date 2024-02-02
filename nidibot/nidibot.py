@@ -132,6 +132,11 @@ class Nidibot:
             logging.debug("Bot was started.")
 
         @bot.command
+        @lightbulb.option(
+            name='index',
+            description='States server index to which command will be applied',
+            required=False
+        )
         @lightbulb.command(
             name="status",
             description="Provides extended information about game server status.",
@@ -140,6 +145,7 @@ class Nidibot:
         async def status(ctx) -> None:
             logging.debug("Called 'status' by '%s'.", ctx.author)
 
+            # server_index = ctx.options.index
             server_status = self.__server_providers[0].get_status()
 
             title = f"{server_status.game_name}"
@@ -207,6 +213,11 @@ class Nidibot:
             await ctx.respond(embed=embed)
 
         @bot.command
+        @lightbulb.option(
+            name='index',
+            description='States server index to which command will be applied',
+            required=False
+        )
         @lightbulb.command(
             name="start",
             description="Starts server if it is offline, restarts server if it is online.",
@@ -234,6 +245,11 @@ class Nidibot:
             self.__server_providers[0].start()
 
         @bot.command
+        @lightbulb.option(
+            name='index',
+            description='States server index to which command will be applied',
+            required=False
+        )
         @lightbulb.command(
             name="stop",
             description="Stops server if it is online.",
@@ -261,6 +277,11 @@ class Nidibot:
             self.__server_providers[0].stop()
 
         @bot.command
+        @lightbulb.option(
+            name='index',
+            description='States server index to which command will be applied',
+            required=False
+        )
         @lightbulb.command(
             name="restart",
             description="Restarts server if it is online, starts server if it is offline.",
@@ -288,6 +309,11 @@ class Nidibot:
             self.__server_providers[0].restart()
 
         @bot.command
+        @lightbulb.option(
+            name='index',
+            description='States server index to which command will be applied',
+            required=False
+        )
         @lightbulb.command(
             name="backup",
             description="Creates backup of games server files and uploads them to storage.",
