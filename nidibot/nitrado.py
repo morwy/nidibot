@@ -43,6 +43,12 @@ class NitradoFtpConfiguration:
 
 class Nitrado:
     def __init__(self, api_token: str, backup_directory: str):
+        if not api_token:
+            raise ValueError("API token value is required for nidibot start!")
+        
+        if not backup_directory:
+            raise ValueError("Backup directory value is required for nidibot start!")
+        
         self.__api_token = api_token
         self.__backup_directory = backup_directory
         self.__default_timeout_seconds = 10
