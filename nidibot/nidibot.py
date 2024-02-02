@@ -9,6 +9,7 @@ import pathlib
 import platform
 import shutil
 from logging.handlers import TimedRotatingFileHandler
+from typing import List
 
 from dacite import from_dict
 import hikari
@@ -18,17 +19,33 @@ from nidibot.nitrado import Nitrado
 
 
 @dataclass
-class NidibotConnectionConfiguration:
-    discord_bot_token: str = ""
-    nitrado_api_token: str = ""
+class DiscordControllerConfiguration:
+    token: str = ""
+    privileged_users: list = field(default_factory=list)
+
+
+@dataclass
+class ControllerConfiguration:
+    discord: DiscordControllerConfiguration = field(
+        default_factory=DiscordControllerConfiguration
+    )
+
+@dataclass
+class ServerProviderConfiguration:
+    type: str = ""
+    token: str = ""
+
+@dataclass
+class StorageConfiguration:
+    type: str = ""
+    token: str = ""
 
 
 @dataclass
 class NidibotConfiguration:
-    connection: NidibotConnectionConfiguration = field(
-        default_factory=NidibotConnectionConfiguration
-    )
-    discord_admin_users: list = field(default_factory=list)
+    controller: ControllerConfiguration = field(default_factory=ControllerConfiguration)
+    server_provider: List[ServerProviderConfiguration] = field(default_factory=list)
+    storage: StorageConfiguration = field(default_factory=StorageConfiguration)
 
 
 class Nidibot:
@@ -47,7 +64,7 @@ class Nidibot:
         self.__configuration = self.__parse_configuration_json_file()
 
         self.__gameserver = Nitrado(
-            self.__configuration.connection.nitrado_api_token, backup_directory
+            self.__configuration.server_provider[0].token, backup_directory
         )
 
         self.__discord_bot = self.__initialize_discord_bot()
@@ -92,7 +109,10 @@ class Nidibot:
         return configuration
 
     def __initialize_discord_bot(self) -> lightbulb.BotApp:
-        bot = lightbulb.BotApp(token=self.__configuration.connection.discord_bot_token)
+        token = self.__configuration.controller.discord.token
+        privileged_users = self.__configuration.controller.discord.privileged_users
+
+        bot = lightbulb.BotApp(token=token)
 
         @bot.listen(hikari.StartedEvent)
         async def on_started(_) -> None:
@@ -183,7 +203,7 @@ class Nidibot:
             logging.debug("Called 'start' by '%s'.", ctx.author)
 
             user = str(ctx.author)
-            if user not in self.__configuration.discord_admin_users:
+            if user not in privileged_users:
                 embed = hikari.Embed(
                     description="Sorry but you don't have rights to call this command! :liar:",
                     color=hikari.colors.Color(0xE64A42),
@@ -210,7 +230,7 @@ class Nidibot:
             logging.debug("Called 'stop' by '%s'.", ctx.author)
 
             user = str(ctx.author)
-            if user not in self.__configuration.discord_admin_users:
+            if user not in privileged_users:
                 embed = hikari.Embed(
                     description="Sorry but you don't have rights to call this command! :liar:",
                     color=hikari.colors.Color(0xE64A42),
@@ -237,7 +257,7 @@ class Nidibot:
             logging.debug("Called 'restart' by '%s'.", ctx.author)
 
             user = str(ctx.author)
-            if user not in self.__configuration.discord_admin_users:
+            if user not in privileged_users:
                 embed = hikari.Embed(
                     description="Sorry but you don't have rights to call this command! :liar:",
                     color=hikari.colors.Color(0xE64A42),
@@ -264,7 +284,7 @@ class Nidibot:
             logging.debug("Called 'backup' by '%s'.", ctx.author)
 
             user = str(ctx.author)
-            if user not in self.__configuration.discord_admin_users:
+            if user not in privileged_users:
                 embed = hikari.Embed(
                     description="Sorry but you don't have rights to call this command! :liar:",
                     color=hikari.colors.Color(0xE64A42),

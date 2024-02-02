@@ -45,11 +45,22 @@ python3 -c 'from nidibot.nidibot import Nidibot; Nidibot.initialize_folder()'
 
 ```json
 {
-    "connection": {
-        "discord_bot_token": "your-discord-bot-token",
-        "nitrado_api_token": "your-nitrado-api-token"
+    "controller": {
+        "discord": {
+            "token": "your-discord-bot-token",
+            "privileged_users": []
+        }
     },
-    "discord_admin_users": []
+    "server_provider": [
+        {
+            "type": "nitrado",
+            "token": "your-gameserver-api-token"
+        }
+    ],
+    "storage": {
+        "type": "google-drive",
+        "token": "your-storage-token"
+    }
 }
 ```
 
