@@ -1,9 +1,16 @@
 #!/usr/bin/env python
 
 from dataclasses import dataclass, field
+from datetime import datetime
+import os
+import pathlib
+import shutil
+import time
+import ftputil
 import json
 import logging
 import requests
+import tempfile
 
 
 @dataclass
@@ -35,8 +42,9 @@ class NitradoFtpConfiguration:
 
 
 class Nitrado:
-    def __init__(self, api_token: str):
+    def __init__(self, api_token: str, backup_directory: str):
         self.__api_token = api_token
+        self.__backup_directory = backup_directory
         self.__default_timeout_seconds = 10
 
         self.__service_list = self.__get_service_list()
@@ -158,8 +166,6 @@ class Nitrado:
             return True
 
     def get_status(self, server_index: int = 0) -> NitradoServerStatus:
-        server_status: NitradoServerStatus = NitradoServerStatus()
-
         try:
             headers = {"Authorization": self.__api_token}
             response = requests.get(
@@ -190,8 +196,8 @@ class Nitrado:
                 server_status.status = "online"
             elif gameserver_dict["status"] == "stopped":
                 server_status.status = "offline"
-            elif gameserver_dict["status"] == "starting":
-                server_status.status = "starting"
+            else:
+                server_status.status = str(gameserver_dict["status"])
 
             if len(query_dict) > 0:
                 server_status.game_version = gameserver_dict["query"]["version"]
@@ -228,6 +234,69 @@ class Nitrado:
             counter += 1
 
         return statuses
+
+    def __download_ftp_folder(
+        self, ftp_server, local_path: str, remote_path: str, ignore_folders: list
+    ):
+        for root_path, folders, files in ftp_server.walk(top=remote_path, topdown=True):
+            root_folder_name = os.path.basename(root_path)
+            if root_folder_name in ignore_folders:
+                return
+
+            for filename in files:
+                remote_filepath = ftp_server.path.join(root_path, filename)
+                local_filepath = os.path.join(local_path, remote_filepath)
+                local_parent_folder = pathlib.Path(local_filepath).parent.absolute()
+                pathlib.Path(local_parent_folder).mkdir(parents=True, exist_ok=True)
+                ftp_server.download(remote_filepath, local_filepath)
+                logging.debug("Downloaded '%s'.", remote_filepath)
+
+            for folder_name in folders:
+                self.__download_ftp_folder(
+                    ftp_server=ftp_server,
+                    local_path=local_path,
+                    remote_path=os.path.join(root_path, folder_name),
+                    ignore_folders=ignore_folders,
+                )
+
+            return
+
+    def download_files(self) -> bool:
+        try:
+            start_time = time.time()
+            with tempfile.TemporaryDirectory() as temp_folder_path:
+                datetime_now = datetime.now()
+                datetime_str = datetime_now.strftime("%Y%m%d_%H%M%S")
+                backup_filename = "palworld_nitrado_backup_" + datetime_str
+                local_path = os.path.join(temp_folder_path, backup_filename)
+                pathlib.Path(local_path).mkdir(parents=True, exist_ok=True)
+
+                with ftputil.FTPHost(
+                    self.__ftp_configuration.hostname,
+                    self.__ftp_configuration.username,
+                    self.__ftp_configuration.password,
+                ) as ftp:
+                    self.__download_ftp_folder(
+                        ftp_server=ftp,
+                        local_path=local_path,
+                        remote_path=".",
+                        ignore_folders=["Crashes", "CrashReportClient"],
+                    )
+
+                shutil.make_archive(
+                    os.path.join(self.__backup_directory, backup_filename),
+                    "zip",
+                    local_path,
+                )
+
+            end_time = time.time()
+            logging.debug("FTP copy took %s.", end_time - start_time)
+
+        except Exception as exception:
+            logging.exception(exception)
+            return False
+
+        return True
 
     def start(self, server_index: int = 0) -> bool:
         return self.restart(server_index)

@@ -18,6 +18,11 @@ def test_gameserver_statuses():
     assert len(nitrado.get_statuses()) > 0
 
 
+def test_gameserver_download_files():
+    nitrado = Nitrado(nitrado_api_token)
+    assert nitrado.download_files()
+
+
 def test_gameserver_start():
     nitrado = Nitrado(nitrado_api_token)
     assert nitrado.start()

@@ -32,12 +32,15 @@ class NidibotConfiguration:
 
 
 class Nidibot:
-    def __init__(self, working_folder_path: str = None):
-        if working_folder_path is None:
+    def __init__(self, working_folder_path: str = ""):
+        if not working_folder_path:
             return
 
         self.__working_folder_path = working_folder_path
         self.__configuration: NidibotConfiguration = NidibotConfiguration()
+
+        backup_directory = os.path.join(self.__working_folder_path, "backup")
+        pathlib.Path(backup_directory).mkdir(parents=True, exist_ok=True)
 
         #
         # Enable daily logging both to file and stdout.
@@ -59,7 +62,9 @@ class Nidibot:
 
         self.__configuration = self.__parse_configuration_json_file()
 
-        self.__gameserver = Nitrado(self.__configuration.connection.nitrado_api_token)
+        self.__gameserver = Nitrado(
+            self.__configuration.connection.nitrado_api_token, backup_directory
+        )
 
         self.__bot = lightbulb.BotApp(
             token=self.__configuration.connection.discord_bot_token
@@ -67,12 +72,7 @@ class Nidibot:
 
         @self.__bot.listen(hikari.StartedEvent)
         async def on_started(_) -> None:
-            logging.debug("Starting the bot.")
-            # logging.debug("Bot is logged in as '%s' user.", self.__bot.user.name)
-
-            logging.debug("Waiting for command tree sync.")
-            # await self.__bot.tree.sync()
-            logging.debug("Command tree sync is completed.")
+            logging.debug("Bot was started.")
 
         @self.__bot.command
         @lightbulb.command(
@@ -97,6 +97,9 @@ class Nidibot:
                 status_color = hikari.colors.Color(0xE64A42)
             elif server_status.status == "restarting":
                 status_smiley = ":warning:"
+                status_color = hikari.colors.Color(0xE67E22)
+            else:
+                status_smiley = ":interrobang:"
                 status_color = hikari.colors.Color(0xE67E22)
 
             embed = hikari.Embed(
@@ -247,9 +250,21 @@ class Nidibot:
                 return
 
             embed = hikari.Embed(
-                description=":no_entry: This command is not yet implemented! :no_entry:",
-                color=hikari.colors.Color(0xE64A42),
+                description=":warning: Started creating backup of the server, please wait.",
+                color=hikari.colors.Color(0xE67E22),
             )
+            await ctx.respond(embed=embed)
+
+            if self.__gameserver.download_files():
+                embed = hikari.Embed(
+                    description=":white_check_mark: Backup was created successfully!",
+                    color=hikari.colors.Color(0x37CB78),
+                )
+            else:
+                embed = hikari.Embed(
+                    description=":no_entry: Backup creation failed, please check bot logs!",
+                    color=hikari.colors.Color(0xE64A42),
+                )
 
             await ctx.respond(embed=embed)
 
