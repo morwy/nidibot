@@ -1,5 +1,7 @@
 # Manually added entries.
-logs/*
+.vscode
+backup
+logs
 bot_configuration.json
 start_bot.py
 
