@@ -32,16 +32,27 @@ class NidibotConfiguration:
 
 
 class Nidibot:
-    def __init__(self, working_folder_path: str = ""):
+    def __init__(self, working_folder_path: str):
         if not working_folder_path:
-            return
+            raise ValueError("Working directory value is required for nidibot start!")
 
         self.__working_folder_path = working_folder_path
         self.__configuration: NidibotConfiguration = NidibotConfiguration()
 
+        self.__initialize_logging()
+
         backup_directory = os.path.join(self.__working_folder_path, "backup")
         pathlib.Path(backup_directory).mkdir(parents=True, exist_ok=True)
 
+        self.__configuration = self.__parse_configuration_json_file()
+
+        self.__gameserver = Nitrado(
+            self.__configuration.connection.nitrado_api_token, backup_directory
+        )
+
+        self.__discord_bot = self.__initialize_discord_bot()
+
+    def __initialize_logging(self) -> None:
         #
         # Enable daily logging both to file and stdout.
         #
@@ -56,25 +67,38 @@ class Nidibot:
 
         logging.basicConfig(
             level=logging.DEBUG,
-            format="%(asctime)s:%(levelname)s:%(funcName)s %(message)s",
+            format="%(asctime)s:%(levelname)s:%(funcName)s(): %(message)s",
             handlers=[handler, logging.StreamHandler()],
         )
 
-        self.__configuration = self.__parse_configuration_json_file()
+        logging.getLogger("hikari").setLevel(logging.WARNING)
+        logging.getLogger("lightbulb").setLevel(logging.WARNING)
+        logging.getLogger("requests").setLevel(logging.WARNING)
+        logging.getLogger("urllib3").setLevel(logging.WARNING)
 
-        self.__gameserver = Nitrado(
-            self.__configuration.connection.nitrado_api_token, backup_directory
+    def __parse_configuration_json_file(self) -> NidibotConfiguration:
+        configuration_filepath = os.path.join(
+            self.__working_folder_path, "bot_configuration.json"
         )
 
-        self.__bot = lightbulb.BotApp(
-            token=self.__configuration.connection.discord_bot_token
+        with open(configuration_filepath, "r", encoding="utf-8") as json_file:
+            configuration_json = json.load(json_file)
+
+        configuration = from_dict(
+            data_class=NidibotConfiguration,
+            data=configuration_json,
         )
 
-        @self.__bot.listen(hikari.StartedEvent)
+        return configuration
+
+    def __initialize_discord_bot(self) -> lightbulb.BotApp:
+        bot = lightbulb.BotApp(token=self.__configuration.connection.discord_bot_token)
+
+        @bot.listen(hikari.StartedEvent)
         async def on_started(_) -> None:
             logging.debug("Bot was started.")
 
-        @self.__bot.command
+        @bot.command
         @lightbulb.command(
             name="status",
             description="Provides extended information about game server status.",
@@ -149,7 +173,7 @@ class Nidibot:
 
             await ctx.respond(embed=embed)
 
-        @self.__bot.command
+        @bot.command
         @lightbulb.command(
             name="start",
             description="Starts server if it is offline, restarts server if it is online.",
@@ -176,7 +200,7 @@ class Nidibot:
 
             self.__gameserver.start()
 
-        @self.__bot.command
+        @bot.command
         @lightbulb.command(
             name="stop",
             description="Stops server if it is online.",
@@ -203,7 +227,7 @@ class Nidibot:
 
             self.__gameserver.stop()
 
-        @self.__bot.command
+        @bot.command
         @lightbulb.command(
             name="restart",
             description="Restarts server if it is online, starts server if it is offline.",
@@ -230,7 +254,7 @@ class Nidibot:
 
             self.__gameserver.restart()
 
-        @self.__bot.command
+        @bot.command
         @lightbulb.command(
             name="backup",
             description="Creates backup of games server files and uploads them to storage.",
@@ -268,20 +292,7 @@ class Nidibot:
 
             await ctx.respond(embed=embed)
 
-    def __parse_configuration_json_file(self) -> NidibotConfiguration:
-        configuration_filepath = os.path.join(
-            self.__working_folder_path, "bot_configuration.json"
-        )
-
-        with open(configuration_filepath, "r", encoding="utf-8") as json_file:
-            configuration_json = json.load(json_file)
-
-        configuration = from_dict(
-            data_class=NidibotConfiguration,
-            data=configuration_json,
-        )
-
-        return configuration
+        return bot
 
     @staticmethod
     def initialize_folder() -> None:
@@ -302,4 +313,4 @@ class Nidibot:
             )
 
     def activate(self) -> None:
-        self.__bot.run()
+        self.__discord_bot.run()
