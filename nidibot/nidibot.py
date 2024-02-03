@@ -15,7 +15,8 @@ from dacite import from_dict
 import hikari
 import lightbulb
 
-from nidibot.nitrado import Nitrado
+from nidibot.server_provider.server_provider_interface import ServerProviderInterface
+from nidibot.server_provider.nitrado_server_provider import NitradoServerProvider
 
 
 @dataclass
@@ -64,7 +65,9 @@ class Nidibot:
         pathlib.Path(backup_directory).mkdir(parents=True, exist_ok=True)
 
         self.__configuration = self.__parse_configuration_json_file()
-        self.__server_providers = self.__initialize_server_providers(backup_directory)
+        self.__server_providers: List[ServerProviderInterface] = (
+            self.__initialize_server_providers(backup_directory)
+        )
         self.__discord_bot = self.__initialize_discord_bot()
 
     def __initialize_logging(self) -> None:
@@ -111,7 +114,7 @@ class Nidibot:
 
         for server_provider_configuration in self.__configuration.server_provider:
             if server_provider_configuration.type == "nitrado":
-                server_provider = Nitrado(
+                server_provider = NitradoServerProvider(
                     server_provider_configuration.token, backup_directory
                 )
                 server_providers.append(server_provider)
@@ -133,9 +136,9 @@ class Nidibot:
 
         @bot.command
         @lightbulb.option(
-            name='index',
-            description='States server index to which command will be applied',
-            required=False
+            name="index",
+            description="States server index to which command will be applied",
+            required=False,
         )
         @lightbulb.command(
             name="status",
@@ -146,7 +149,7 @@ class Nidibot:
             logging.debug("Called 'status' by '%s'.", ctx.author)
 
             # server_index = ctx.options.index
-            server_status = self.__server_providers[0].get_status()
+            server_status = self.__server_providers[0].status()
 
             title = f"{server_status.game_name}"
             if server_status.game_version:
@@ -214,9 +217,9 @@ class Nidibot:
 
         @bot.command
         @lightbulb.option(
-            name='index',
-            description='States server index to which command will be applied',
-            required=False
+            name="index",
+            description="States server index to which command will be applied",
+            required=False,
         )
         @lightbulb.command(
             name="start",
@@ -246,9 +249,9 @@ class Nidibot:
 
         @bot.command
         @lightbulb.option(
-            name='index',
-            description='States server index to which command will be applied',
-            required=False
+            name="index",
+            description="States server index to which command will be applied",
+            required=False,
         )
         @lightbulb.command(
             name="stop",
@@ -278,9 +281,9 @@ class Nidibot:
 
         @bot.command
         @lightbulb.option(
-            name='index',
-            description='States server index to which command will be applied',
-            required=False
+            name="index",
+            description="States server index to which command will be applied",
+            required=False,
         )
         @lightbulb.command(
             name="restart",
@@ -310,9 +313,9 @@ class Nidibot:
 
         @bot.command
         @lightbulb.option(
-            name='index',
-            description='States server index to which command will be applied',
-            required=False
+            name="index",
+            description="States server index to which command will be applied",
+            required=False,
         )
         @lightbulb.command(
             name="backup",
@@ -338,7 +341,7 @@ class Nidibot:
             )
             await ctx.respond(embed=embed)
 
-            if self.__server_providers[0].download_files():
+            if self.__server_providers[0].create_backup():
                 embed = hikari.Embed(
                     description=":white_check_mark: Backup was created successfully!",
                     color=hikari.colors.Color(0x37CB78),
