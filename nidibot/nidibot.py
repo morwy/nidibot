@@ -229,9 +229,16 @@ class Nidibot:
         async def start(ctx) -> None:
             logging.debug("Called 'start' by '%s'.", ctx.author)
 
+            server_status = self.__server_providers[0].status()
+
+            title = f"{server_status.game_name}"
+            if server_status.game_version:
+                title += f" ({server_status.game_version})"
+
             user = str(ctx.author)
             if user not in privileged_users:
                 embed = hikari.Embed(
+                    title=title,
                     description="Sorry but you don't have rights to call this command! :liar:",
                     color=hikari.colors.Color(0xE64A42),
                 )
@@ -240,6 +247,7 @@ class Nidibot:
                 return
 
             embed = hikari.Embed(
+                title=title,
                 description=":warning: Starting server! :warning:",
                 color=hikari.colors.Color(0xE64A42),
             )
@@ -261,9 +269,16 @@ class Nidibot:
         async def stop(ctx) -> None:
             logging.debug("Called 'stop' by '%s'.", ctx.author)
 
+            server_status = self.__server_providers[0].status()
+
+            title = f"{server_status.game_name}"
+            if server_status.game_version:
+                title += f" ({server_status.game_version})"
+
             user = str(ctx.author)
             if user not in privileged_users:
                 embed = hikari.Embed(
+                    title=title,
                     description="Sorry but you don't have rights to call this command! :liar:",
                     color=hikari.colors.Color(0xE64A42),
                 )
@@ -272,6 +287,7 @@ class Nidibot:
                 return
 
             embed = hikari.Embed(
+                title=title,
                 description=":warning: Stopping server! :warning:",
                 color=hikari.colors.Color(0xE64A42),
             )
@@ -293,9 +309,16 @@ class Nidibot:
         async def restart(ctx) -> None:
             logging.debug("Called 'restart' by '%s'.", ctx.author)
 
+            server_status = self.__server_providers[0].status()
+
+            title = f"{server_status.game_name}"
+            if server_status.game_version:
+                title += f" ({server_status.game_version})"
+
             user = str(ctx.author)
             if user not in privileged_users:
                 embed = hikari.Embed(
+                    title=title,
                     description="Sorry but you don't have rights to call this command! :liar:",
                     color=hikari.colors.Color(0xE64A42),
                 )
@@ -304,6 +327,7 @@ class Nidibot:
                 return
 
             embed = hikari.Embed(
+                title=title,
                 description=":warning: Restarting server! :warning:",
                 color=hikari.colors.Color(0xE64A42),
             )
@@ -325,9 +349,16 @@ class Nidibot:
         async def backup(ctx) -> None:
             logging.debug("Called 'backup' by '%s'.", ctx.author)
 
+            server_status = self.__server_providers[0].status()
+
+            title = f"{server_status.game_name}"
+            if server_status.game_version:
+                title += f" ({server_status.game_version})"
+
             user = str(ctx.author)
             if user not in privileged_users:
                 embed = hikari.Embed(
+                    title=title,
                     description="Sorry but you don't have rights to call this command! :liar:",
                     color=hikari.colors.Color(0xE64A42),
                 )
@@ -336,6 +367,7 @@ class Nidibot:
                 return
 
             embed = hikari.Embed(
+                title=title,
                 description=":warning: Started creating backup of the server, please wait.",
                 color=hikari.colors.Color(0xE67E22),
             )
@@ -343,11 +375,13 @@ class Nidibot:
 
             if self.__server_providers[0].create_backup():
                 embed = hikari.Embed(
+                    title=title,
                     description=":white_check_mark: Backup was created successfully!",
                     color=hikari.colors.Color(0x37CB78),
                 )
             else:
                 embed = hikari.Embed(
+                    title=title,
                     description=":no_entry: Backup creation failed, please check bot logs!",
                     color=hikari.colors.Color(0xE64A42),
                 )
