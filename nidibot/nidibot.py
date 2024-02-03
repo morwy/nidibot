@@ -14,6 +14,7 @@ from typing import List
 from dacite import from_dict
 import hikari
 import lightbulb
+import pkg_resources
 
 from nidibot.server_provider.server_provider_interface import ServerProviderInterface
 from nidibot.server_provider.nitrado_server_provider import NitradoServerProvider
@@ -132,7 +133,11 @@ class Nidibot:
 
         @bot.listen(hikari.StartedEvent)
         async def on_started(_) -> None:
-            logging.debug("Bot was started.")
+            try:
+                nidibot_version = pkg_resources.get_distribution("nidibot").version
+                logging.info("nidibot v%s was started.", nidibot_version)
+            except pkg_resources.DistributionNotFound:
+                logging.debug("nidibot was started.")
 
         @bot.command
         @lightbulb.option(
