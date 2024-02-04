@@ -15,6 +15,7 @@ from dacite import from_dict
 import hikari
 import lightbulb
 import pkg_resources
+from nidibot.server_provider.game_server import GameServer
 
 from nidibot.server_provider.server_provider_interface import ServerProviderInterface
 from nidibot.server_provider.nitrado_server_provider import NitradoServerProvider
@@ -69,6 +70,11 @@ class Nidibot:
         self.__server_providers: List[ServerProviderInterface] = (
             self.__initialize_server_providers(backup_directory)
         )
+
+        self.__game_servers: List[GameServer] = []
+        for server_provider in self.__server_providers:
+            self.__game_servers.extend(server_provider.get_servers())
+
         self.__discord_bot = self.__initialize_discord_bot()
 
     def __initialize_logging(self) -> None:
@@ -126,6 +132,10 @@ class Nidibot:
         return server_providers
 
     def __initialize_discord_bot(self) -> lightbulb.BotApp:
+        game_server_names: list = []
+        for _game_server in self.__game_servers:
+            game_server_names.append(_game_server.name())
+
         token = self.__configuration.controller.discord.token
         privileged_users = self.__configuration.controller.discord.privileged_users
 
@@ -141,8 +151,9 @@ class Nidibot:
 
         @bot.command
         @lightbulb.option(
-            name="index",
-            description="States server index to which command will be applied",
+            name="name",
+            description="States server to which command will be applied",
+            choices=game_server_names,
             required=False,
         )
         @lightbulb.command(
@@ -153,8 +164,15 @@ class Nidibot:
         async def status(ctx) -> None:
             logging.debug("Called 'status' by '%s'.", ctx.author)
 
-            # server_index = ctx.options.index
-            server_status = self.__server_providers[0].status()
+            server_name = ctx.options.name
+            if server_name is None:
+                game_server = self.__game_servers[0]
+            else:
+                game_server = next(
+                    x for x in self.__game_servers if x.name() == server_name
+                )
+
+            server_status = game_server.status()
 
             title = f"{server_status.game_name}"
             if server_status.game_version:
@@ -222,8 +240,9 @@ class Nidibot:
 
         @bot.command
         @lightbulb.option(
-            name="index",
-            description="States server index to which command will be applied",
+            name="name",
+            description="States server to which command will be applied",
+            choices=game_server_names,
             required=False,
         )
         @lightbulb.command(
@@ -234,7 +253,15 @@ class Nidibot:
         async def start(ctx) -> None:
             logging.debug("Called 'start' by '%s'.", ctx.author)
 
-            server_status = self.__server_providers[0].status()
+            server_name = ctx.options.name
+            if server_name is None:
+                game_server = self.__game_servers[0]
+            else:
+                game_server = next(
+                    x for x in self.__game_servers if x.name() == server_name
+                )
+
+            server_status = game_server.status()
 
             title = f"{server_status.game_name}"
             if server_status.game_version:
@@ -258,12 +285,13 @@ class Nidibot:
             )
             await ctx.respond(embed=embed)
 
-            self.__server_providers[0].start()
+            game_server.start()
 
         @bot.command
         @lightbulb.option(
-            name="index",
-            description="States server index to which command will be applied",
+            name="name",
+            description="States server to which command will be applied",
+            choices=game_server_names,
             required=False,
         )
         @lightbulb.command(
@@ -274,7 +302,15 @@ class Nidibot:
         async def stop(ctx) -> None:
             logging.debug("Called 'stop' by '%s'.", ctx.author)
 
-            server_status = self.__server_providers[0].status()
+            server_name = ctx.options.name
+            if server_name is None:
+                game_server = self.__game_servers[0]
+            else:
+                game_server = next(
+                    x for x in self.__game_servers if x.name() == server_name
+                )
+
+            server_status = game_server.status()
 
             title = f"{server_status.game_name}"
             if server_status.game_version:
@@ -298,12 +334,13 @@ class Nidibot:
             )
             await ctx.respond(embed=embed)
 
-            self.__server_providers[0].stop()
+            game_server.stop()
 
         @bot.command
         @lightbulb.option(
-            name="index",
-            description="States server index to which command will be applied",
+            name="name",
+            description="States server to which command will be applied",
+            choices=game_server_names,
             required=False,
         )
         @lightbulb.command(
@@ -314,7 +351,15 @@ class Nidibot:
         async def restart(ctx) -> None:
             logging.debug("Called 'restart' by '%s'.", ctx.author)
 
-            server_status = self.__server_providers[0].status()
+            server_name = ctx.options.name
+            if server_name is None:
+                game_server = self.__game_servers[0]
+            else:
+                game_server = next(
+                    x for x in self.__game_servers if x.name() == server_name
+                )
+
+            server_status = game_server.status()
 
             title = f"{server_status.game_name}"
             if server_status.game_version:
@@ -338,12 +383,13 @@ class Nidibot:
             )
             await ctx.respond(embed=embed)
 
-            self.__server_providers[0].restart()
+            game_server.restart()
 
         @bot.command
         @lightbulb.option(
-            name="index",
-            description="States server index to which command will be applied",
+            name="name",
+            description="States server to which command will be applied",
+            choices=game_server_names,
             required=False,
         )
         @lightbulb.command(
@@ -354,7 +400,15 @@ class Nidibot:
         async def backup(ctx) -> None:
             logging.debug("Called 'backup' by '%s'.", ctx.author)
 
-            server_status = self.__server_providers[0].status()
+            server_name = ctx.options.name
+            if server_name is None:
+                game_server = self.__game_servers[0]
+            else:
+                game_server = next(
+                    x for x in self.__game_servers if x.name() == server_name
+                )
+
+            server_status = game_server.status()
 
             title = f"{server_status.game_name}"
             if server_status.game_version:
@@ -378,7 +432,7 @@ class Nidibot:
             )
             await ctx.respond(embed=embed)
 
-            if self.__server_providers[0].create_backup():
+            if game_server.create_backup():
                 embed = hikari.Embed(
                     title=title,
                     description=":white_check_mark: Backup was created successfully!",
