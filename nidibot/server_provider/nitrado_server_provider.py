@@ -10,10 +10,16 @@ import shutil
 import tempfile
 import threading
 import time
+from typing import Dict, List
 import ftputil
 
 import requests
-from .server_provider_interface import ServerProviderInterface, ServerStatus
+
+from nidibot.server_provider.game_server import GameServer
+from nidibot.server_provider.server_provider_interface import (
+    ServerProviderInterface,
+    ServerStatus,
+)
 
 
 @dataclass
@@ -52,7 +58,7 @@ class NitradoServerProvider(ServerProviderInterface):
         self.__default_timeout_seconds = 10
         self.__default_polling_seconds = 5
 
-        self.__servers: list = []
+        self.__servers: Dict[str, NitradoServerInformation] = {}
 
         logging.basicConfig(
             level=logging.DEBUG,
@@ -60,10 +66,40 @@ class NitradoServerProvider(ServerProviderInterface):
             handlers=[logging.StreamHandler()],
         )
 
-        self.__stopping_condition = threading.Event()
+        self.__data_received_event = threading.Event()
+        self.__stopping_event = threading.Event()
+
         self.__polling_thread = threading.Thread(target=self._poll)
         self.__polling_thread.daemon = True
         self.__polling_thread.start()
+
+        self.__data_received_event.wait()
+
+    def __download_ftp_folder(
+        self, ftp_server, local_path: str, remote_path: str, ignore_folders: list
+    ):
+        for root_path, folders, files in ftp_server.walk(top=remote_path, topdown=True):
+            root_folder_name = os.path.basename(root_path)
+            if root_folder_name in ignore_folders:
+                return
+
+            for filename in files:
+                remote_filepath = ftp_server.path.join(root_path, filename)
+                local_filepath = os.path.join(local_path, remote_filepath)
+                local_parent_folder = pathlib.Path(local_filepath).parent.absolute()
+                pathlib.Path(local_parent_folder).mkdir(parents=True, exist_ok=True)
+                ftp_server.download(remote_filepath, local_filepath)
+                logging.debug("Downloaded '%s'.", remote_filepath)
+
+            for folder_name in folders:
+                self.__download_ftp_folder(
+                    ftp_server=ftp_server,
+                    local_path=local_path,
+                    remote_path=os.path.join(root_path, folder_name),
+                    ignore_folders=ignore_folders,
+                )
+
+            return
 
     def __get_services(self) -> list:
         service_list = []
@@ -100,37 +136,11 @@ class NitradoServerProvider(ServerProviderInterface):
 
         return service_list
 
-    def __download_ftp_folder(
-        self, ftp_server, local_path: str, remote_path: str, ignore_folders: list
-    ):
-        for root_path, folders, files in ftp_server.walk(top=remote_path, topdown=True):
-            root_folder_name = os.path.basename(root_path)
-            if root_folder_name in ignore_folders:
-                return
-
-            for filename in files:
-                remote_filepath = ftp_server.path.join(root_path, filename)
-                local_filepath = os.path.join(local_path, remote_filepath)
-                local_parent_folder = pathlib.Path(local_filepath).parent.absolute()
-                pathlib.Path(local_parent_folder).mkdir(parents=True, exist_ok=True)
-                ftp_server.download(remote_filepath, local_filepath)
-                logging.debug("Downloaded '%s'.", remote_filepath)
-
-            for folder_name in folders:
-                self.__download_ftp_folder(
-                    ftp_server=ftp_server,
-                    local_path=local_path,
-                    remote_path=os.path.join(root_path, folder_name),
-                    ignore_folders=ignore_folders,
-                )
-
-            return
-
     def _poll(self) -> None:
         logging.debug("Polling thread started.")
 
-        while not self.__stopping_condition.is_set():
-            servers: list = []
+        while not self.__stopping_event.is_set():
+            servers: Dict[str, NitradoServerInformation] = {}
             services = self.__get_services()
             for service in services:
                 try:
@@ -195,26 +205,41 @@ class NitradoServerProvider(ServerProviderInterface):
                     server.ftp.username = ftp_dict["username"]
                     server.ftp.password = ftp_dict["password"]
 
-                    servers.append(server)
+                    servers[server.id] = server
 
                 except Exception as exception:
                     logging.exception(exception)
 
             self.__servers = servers
 
-            self.__stopping_condition.wait(self.__default_polling_seconds)
+            self.__data_received_event.set()
+            self.__stopping_event.wait(self.__default_polling_seconds)
 
-    def status(self, server_index: int = 0) -> ServerStatus:
-        return self.__servers[server_index].status
+    def name(self) -> str:
+        return "Nitrado"
 
-    def start(self, server_index: int = 0) -> bool:
-        return self.restart(server_index)
+    def get_servers(self) -> List[GameServer]:
+        servers: List[GameServer] = []
 
-    def stop(self, server_index: int = 0) -> bool:
+        for key, value in self.__servers.items():
+            name = f"{value.short_name}-{value.status.server_address}"
+            servers.append(
+                GameServer(server_provider=self, server_id=key, server_name=name)
+            )
+
+        return servers
+
+    def status(self, server_id: str = "") -> ServerStatus:
+        return self.__servers[server_id].status
+
+    def start(self, server_id: str = "") -> bool:
+        return self.restart(server_id)
+
+    def stop(self, server_id: str = "") -> bool:
         try:
             headers = {"Authorization": self.__api_token}
             response = requests.post(
-                f"https://api.nitrado.net/services/{self.__servers[server_index].id}/gameservers/stop",
+                f"https://api.nitrado.net/services/{server_id}/gameservers/stop",
                 timeout=self.__default_timeout_seconds,
                 headers=headers,
             )
@@ -233,11 +258,11 @@ class NitradoServerProvider(ServerProviderInterface):
             logging.exception(exception)
             return False
 
-    def restart(self, server_index: int = 0) -> bool:
+    def restart(self, server_id: str = "") -> bool:
         try:
             headers = {"Authorization": self.__api_token}
             response = requests.post(
-                f"https://api.nitrado.net/services/{self.__servers[server_index].id}/gameservers/restart",
+                f"https://api.nitrado.net/services/{server_id}/gameservers/restart",
                 timeout=self.__default_timeout_seconds,
                 headers=headers,
             )
@@ -256,20 +281,20 @@ class NitradoServerProvider(ServerProviderInterface):
             logging.exception(exception)
             return False
 
-    def create_backup(self, server_index: int = 0) -> bool:
+    def create_backup(self, server_id: str = "") -> bool:
         try:
             start_time = time.time()
             with tempfile.TemporaryDirectory() as temp_folder_path:
                 datetime_now = datetime.now()
                 datetime_str = datetime_now.strftime("%Y%m%d_%H%M%S")
-                backup_filename = "palworld_nitrado_backup_" + datetime_str
+                backup_filename = f"{self.name().lower()}_{self.__servers[server_id].short_name}_id-{server_id}_{datetime_str}"
                 local_path = os.path.join(temp_folder_path, backup_filename)
                 pathlib.Path(local_path).mkdir(parents=True, exist_ok=True)
 
                 with ftputil.FTPHost(
-                    self.__servers[server_index].ftp.hostname,
-                    self.__servers[server_index].ftp.username,
-                    self.__servers[server_index].ftp.password,
+                    self.__servers[server_id].ftp.hostname,
+                    self.__servers[server_id].ftp.username,
+                    self.__servers[server_id].ftp.password,
                 ) as ftp:
                     self.__download_ftp_folder(
                         ftp_server=ftp,
@@ -284,6 +309,11 @@ class NitradoServerProvider(ServerProviderInterface):
                     local_path,
                 )
 
+                logging.debug(
+                    "Created backup archive at path: '%s'.",
+                    os.path.join(self.__backup_directory, backup_filename),
+                )
+
             end_time = time.time()
             logging.debug("FTP copy took %s.", end_time - start_time)
 
@@ -293,5 +323,5 @@ class NitradoServerProvider(ServerProviderInterface):
 
         return True
 
-    def restore_backup(self, server_index: int = 0) -> bool:
+    def restore_backup(self, server_id: str = "") -> bool:
         return False

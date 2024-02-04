@@ -23,25 +23,33 @@ class ServerProviderInterface(ABC):
         pass
 
     @abstractmethod
-    def status(self, server_index: int = 0) -> ServerStatus:
+    def name(self) -> str:
         pass
 
     @abstractmethod
-    def start(self, server_index: int = 0) -> bool:
+    def get_servers(self) -> list:
         pass
 
     @abstractmethod
-    def stop(self, server_index: int = 0) -> bool:
+    def status(self, server_id: str = "") -> ServerStatus:
         pass
 
     @abstractmethod
-    def restart(self, server_index: int = 0) -> bool:
+    def start(self, server_id: str = "") -> bool:
         pass
 
     @abstractmethod
-    def create_backup(self, server_index: int = 0) -> bool:
+    def stop(self, server_id: str = "") -> bool:
         pass
 
     @abstractmethod
-    def restore_backup(self, server_index: int = 0) -> bool:
+    def restart(self, server_id: str = "") -> bool:
+        pass
+
+    @abstractmethod
+    def create_backup(self, server_id: str = "") -> bool:
+        pass
+
+    @abstractmethod
+    def restore_backup(self, server_id: str = "") -> bool:
         pass
