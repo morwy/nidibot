@@ -113,9 +113,8 @@ class NitradoServerProvider(ServerProviderInterface):
             )
 
             logging.debug(
-                "Response received, status code: %d, content: '%s'.",
+                "Response received, status code: %d.",
                 response.status_code,
-                response.content.decode("utf-8"),
             )
 
             content_json = json.loads(response.content.decode("utf-8"))
