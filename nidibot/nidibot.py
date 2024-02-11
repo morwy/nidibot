@@ -141,6 +141,17 @@ class Nidibot:
 
         bot = lightbulb.BotApp(token=token)
 
+        def get_embed_title(game_server) -> str:
+            server_status = game_server.status()
+
+            title = f"{server_status.game_name}"
+            if server_status.game_version:
+                title += f" ({server_status.game_version})"
+
+            title += f" - {server_status.server_address}"
+
+            return title
+
         @bot.listen(hikari.StartedEvent)
         async def on_started(_) -> None:
             try:
@@ -174,9 +185,7 @@ class Nidibot:
 
             server_status = game_server.status()
 
-            title = f"{server_status.game_name}"
-            if server_status.game_version:
-                title += f" ({server_status.game_version})"
+            title = get_embed_title(game_server)
 
             if server_status.status == "online":
                 status_smiley = ":white_check_mark:"
@@ -261,11 +270,7 @@ class Nidibot:
                     x for x in self.__game_servers if x.name() == server_name
                 )
 
-            server_status = game_server.status()
-
-            title = f"{server_status.game_name}"
-            if server_status.game_version:
-                title += f" ({server_status.game_version})"
+            title = get_embed_title(game_server)
 
             user = str(ctx.author)
             if user not in privileged_users:
@@ -310,11 +315,7 @@ class Nidibot:
                     x for x in self.__game_servers if x.name() == server_name
                 )
 
-            server_status = game_server.status()
-
-            title = f"{server_status.game_name}"
-            if server_status.game_version:
-                title += f" ({server_status.game_version})"
+            title = get_embed_title(game_server)
 
             user = str(ctx.author)
             if user not in privileged_users:
@@ -359,11 +360,7 @@ class Nidibot:
                     x for x in self.__game_servers if x.name() == server_name
                 )
 
-            server_status = game_server.status()
-
-            title = f"{server_status.game_name}"
-            if server_status.game_version:
-                title += f" ({server_status.game_version})"
+            title = get_embed_title(game_server)
 
             user = str(ctx.author)
             if user not in privileged_users:
@@ -408,11 +405,7 @@ class Nidibot:
                     x for x in self.__game_servers if x.name() == server_name
                 )
 
-            server_status = game_server.status()
-
-            title = f"{server_status.game_name}"
-            if server_status.game_version:
-                title += f" ({server_status.game_version})"
+            title = get_embed_title(game_server)
 
             user = str(ctx.author)
             if user not in privileged_users:
