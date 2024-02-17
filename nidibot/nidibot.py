@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-from dataclasses import dataclass, field
 import json
 import logging
 import os
 import pathlib
 import platform
 import shutil
+from dataclasses import dataclass, field
 from logging.handlers import TimedRotatingFileHandler
 from typing import List
 
@@ -50,10 +50,13 @@ class Nidibot:
 
         self.__configuration = self.__parse_configuration_json_file()
 
+        self.__bots: List[BotInterface] = []
+
         self.__server_providers: List[ServerProviderInterface] = (
             ServerProviderFactory.create_all(
                 configuration_list=self.__configuration.server_providers,
                 root_backup_path=root_backup_path,
+                notify_callback=self.__notify_callback,
             )
         )
         if len(self.__server_providers) == 0:
@@ -63,7 +66,7 @@ class Nidibot:
         for server_provider in self.__server_providers:
             self.__game_servers.extend(server_provider.get_servers())
 
-        self.__bots: List[BotInterface] = BotFactory.create_all(
+        self.__bots = BotFactory.create_all(
             configuration_list=self.__configuration.bots,
             game_servers=self.__game_servers,
         )
@@ -109,6 +112,10 @@ class Nidibot:
 
         return configuration
 
+    def __notify_callback(self, title: str, message: str):
+        for bot in self.__bots:
+            bot.notify(title, message)
+
     def start(self) -> None:
         for bot in self.__bots:
             bot.activate()
@@ -143,7 +150,9 @@ class Nidibot:
 
             for line_index, line in enumerate(file_lines):
                 if "ExecStart=/user/bin/python3 /home/nidibot/start_bot.py" in line:
-                    script_filepath = os.path.join(current_working_folder, "start_bot.py")
+                    script_filepath = os.path.join(
+                        current_working_folder, "start_bot.py"
+                    )
                     edited_line = f"ExecStart=/user/bin/python3 {script_filepath}\n"
                     file_lines[line_index] = edited_line
 

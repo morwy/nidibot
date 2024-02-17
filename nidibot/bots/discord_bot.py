@@ -1,14 +1,24 @@
 #!/usr/bin/env python
 
-from datetime import datetime, date
-from typing import List
 import logging
+from dataclasses import dataclass
+from datetime import date, datetime
+from multiprocessing import Lock
+from typing import List
 
 import hikari
 import lightbulb
-import pkg_resources
+import pkg_resources  # type: ignore
+from lightbulb.ext import tasks
+
 from nidibot.bots.bot_interface import BotConfiguration, BotInterface
 from nidibot.server_provider.game_server import GameServer
+
+
+@dataclass
+class NotifyMessage:
+    title: str = ""
+    message: str = ""
 
 
 class DiscordBot(BotInterface):
@@ -20,16 +30,24 @@ class DiscordBot(BotInterface):
         for game_server in self.__game_servers:
             self.__game_server_names.append(game_server.name())
 
+        self.__notify_mutex = Lock()
+        self.__notify_messages: List[NotifyMessage] = []
+
         self.__bot = lightbulb.BotApp(token=self.__configuration.token)
+        tasks.load(self.__bot)
+
+        self.__color_green = 0x37CB78
+        self.__color_orange = 0xE67E22
+        self.__color_red = 0xE64A42
 
         def get_embed_title(game_server) -> str:
             server_status = game_server.status()
 
             title = f"{server_status.game_name}"
-            if server_status.game_version:
-                title += f" ({server_status.game_version})"
+            if server_status.version:
+                title += f" ({server_status.version})"
 
-            title += f" - {server_status.server_address}"
+            title += f" - {server_status.address}"
 
             return title
 
@@ -70,16 +88,16 @@ class DiscordBot(BotInterface):
 
             if server_status.status == "online":
                 status_smiley = ":white_check_mark:"
-                status_color = hikari.colors.Color(0x37CB78)
+                status_color = hikari.colors.Color(self.__color_green)
             elif server_status.status == "offline":
                 status_smiley = ":no_entry:"
-                status_color = hikari.colors.Color(0xE64A42)
+                status_color = hikari.colors.Color(self.__color_red)
             elif server_status.status == "restarting":
                 status_smiley = ":warning:"
-                status_color = hikari.colors.Color(0xE67E22)
+                status_color = hikari.colors.Color(self.__color_orange)
             else:
                 status_smiley = ":interrobang:"
-                status_color = hikari.colors.Color(0xE67E22)
+                status_color = hikari.colors.Color(self.__color_orange)
 
             embed = hikari.Embed(
                 title=title,
@@ -87,7 +105,7 @@ class DiscordBot(BotInterface):
             )
 
             embed.add_field(
-                name="Address:", value=f"`{server_status.server_address}`", inline=True
+                name="Address:", value=f"`{server_status.address}`", inline=True
             )
             embed.add_field(
                 name="Status:",
@@ -158,7 +176,7 @@ class DiscordBot(BotInterface):
                 embed = hikari.Embed(
                     title=title,
                     description="Sorry but you don't have rights to call this command! :liar:",
-                    color=hikari.colors.Color(0xE64A42),
+                    color=hikari.colors.Color(self.__color_red),
                 )
 
                 await ctx.respond(embed=embed)
@@ -167,7 +185,7 @@ class DiscordBot(BotInterface):
             embed = hikari.Embed(
                 title=title,
                 description=":warning: Starting server! :warning:",
-                color=hikari.colors.Color(0xE64A42),
+                color=hikari.colors.Color(self.__color_red),
             )
             await ctx.respond(embed=embed)
 
@@ -203,7 +221,7 @@ class DiscordBot(BotInterface):
                 embed = hikari.Embed(
                     title=title,
                     description="Sorry but you don't have rights to call this command! :liar:",
-                    color=hikari.colors.Color(0xE64A42),
+                    color=hikari.colors.Color(self.__color_red),
                 )
 
                 await ctx.respond(embed=embed)
@@ -212,7 +230,7 @@ class DiscordBot(BotInterface):
             embed = hikari.Embed(
                 title=title,
                 description=":warning: Stopping server! :warning:",
-                color=hikari.colors.Color(0xE64A42),
+                color=hikari.colors.Color(self.__color_red),
             )
             await ctx.respond(embed=embed)
 
@@ -248,7 +266,7 @@ class DiscordBot(BotInterface):
                 embed = hikari.Embed(
                     title=title,
                     description="Sorry but you don't have rights to call this command! :liar:",
-                    color=hikari.colors.Color(0xE64A42),
+                    color=hikari.colors.Color(self.__color_red),
                 )
 
                 await ctx.respond(embed=embed)
@@ -257,7 +275,7 @@ class DiscordBot(BotInterface):
             embed = hikari.Embed(
                 title=title,
                 description=":warning: Restarting server! :warning:",
-                color=hikari.colors.Color(0xE64A42),
+                color=hikari.colors.Color(self.__color_red),
             )
             await ctx.respond(embed=embed)
 
@@ -293,7 +311,7 @@ class DiscordBot(BotInterface):
                 embed = hikari.Embed(
                     title=title,
                     description="Sorry but you don't have rights to call this command! :liar:",
-                    color=hikari.colors.Color(0xE64A42),
+                    color=hikari.colors.Color(self.__color_red),
                 )
 
                 await ctx.respond(embed=embed)
@@ -302,7 +320,7 @@ class DiscordBot(BotInterface):
             embed = hikari.Embed(
                 title=title,
                 description=":warning: Started creating backup of the server, please wait.",
-                color=hikari.colors.Color(0xE67E22),
+                color=hikari.colors.Color(self.__color_orange),
             )
             await ctx.respond(embed=embed)
 
@@ -310,16 +328,56 @@ class DiscordBot(BotInterface):
                 embed = hikari.Embed(
                     title=title,
                     description=":white_check_mark: Backup was created successfully!",
-                    color=hikari.colors.Color(0x37CB78),
+                    color=hikari.colors.Color(self.__color_green),
                 )
             else:
                 embed = hikari.Embed(
                     title=title,
                     description=":no_entry: Backup creation failed, please check bot logs!",
-                    color=hikari.colors.Color(0xE64A42),
+                    color=hikari.colors.Color(self.__color_red),
                 )
 
             await ctx.respond(embed=embed)
+
+        @tasks.task(s=5, auto_start=True)
+        async def notify_loop():
+            local_notify_messages: List[NotifyMessage] = []
+            with self.__notify_mutex:
+                local_notify_messages = self.__notify_messages
+                self.__notify_messages = []
+
+            if len(local_notify_messages) == 0:
+                return
+
+            connected_channels: list = []
+            connected_guilds = await self.__bot.rest.fetch_my_guilds()
+            for guild in connected_guilds:
+                channels = await self.__bot.rest.fetch_guild_channels(guild)
+                for channel in channels:
+                    if channel.type == hikari.ChannelType.GUILD_TEXT:
+                        connected_channels.append(channel)
+
+            for notify_message in local_notify_messages:
+                embed = hikari.Embed(
+                    title=notify_message.title,
+                    description=f":warning: {notify_message.message}",
+                    color=hikari.colors.Color(self.__color_orange),
+                )
+
+                for channel in connected_channels:
+                    try:
+                        await self.__bot.rest.create_message(
+                            channel=channel.id, embed=embed
+                        )
+                    except hikari.errors.ForbiddenError as exception:
+                        logging.exception(exception)
+
+    def notify(self, title: str, message: str) -> None:
+        with self.__notify_mutex:
+            notify_message: NotifyMessage = NotifyMessage()
+            notify_message.title = title
+            notify_message.message = message
+            self.__notify_messages.append(notify_message)
 
     def activate(self) -> bool:
         try:

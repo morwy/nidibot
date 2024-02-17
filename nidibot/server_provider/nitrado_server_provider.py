@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-from dataclasses import dataclass, field
-from datetime import datetime
 import json
 import logging
 import os
@@ -10,10 +8,12 @@ import shutil
 import tempfile
 import threading
 import time
+from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Dict, List
-import ftputil
 
-import requests
+import ftputil  # type: ignore
+import requests  # type: ignore
 
 from nidibot.server_provider.game_server import GameServer
 from nidibot.server_provider.server_provider_interface import (
@@ -46,7 +46,7 @@ class NitradoServerInformation:
 
 
 class NitradoServerProvider(ServerProviderInterface):
-    def __init__(self, api_token: str, backup_directory: str):
+    def __init__(self, api_token: str, backup_directory: str, notify_callback):
         if not api_token:
             raise ValueError("API token value is required for nidibot start!")
 
@@ -55,6 +55,7 @@ class NitradoServerProvider(ServerProviderInterface):
 
         self.__api_token = api_token
         self.__backup_directory = backup_directory
+        self.__notify_callback = notify_callback
         self.__default_timeout_seconds = 10
         self.__default_polling_seconds = 5
 
@@ -177,10 +178,8 @@ class NitradoServerProvider(ServerProviderInterface):
                         server.status.status = str(gameserver_dict["status"])
 
                     if len(query_dict) > 0:
-                        server.status.game_version = gameserver_dict["query"]["version"]
-                        server.status.server_address = gameserver_dict["query"][
-                            "connect_ip"
-                        ]
+                        server.status.version = gameserver_dict["query"]["version"]
+                        server.status.address = gameserver_dict["query"]["connect_ip"]
                         server.status.players_limit = int(
                             gameserver_dict["query"]["player_max"]
                         )
@@ -189,7 +188,7 @@ class NitradoServerProvider(ServerProviderInterface):
                         )
                         server.status.player_names = gameserver_dict["query"]["players"]
                     else:
-                        server.status.server_address = (
+                        server.status.address = (
                             str(gameserver_dict["ip"])
                             + ":"
                             + str(gameserver_dict["query_port"])
@@ -209,6 +208,58 @@ class NitradoServerProvider(ServerProviderInterface):
                 except Exception as exception:
                     logging.exception(exception)
 
+            #
+            # Check for changes in status and notify.
+            #
+            if len(self.__servers) > 0:
+                for server_id, server in servers.items():
+                    title = f"{server.status.game_name}"
+                    if server.status.version:
+                        title += f" ({server.status.version})"
+
+                    title += f" - {server.status.address}"
+
+                    if server_id not in self.__servers:
+                        self.__notify_callback(
+                            title, "New game server appeared, please configure it."
+                        )
+
+                    if server.status.status != self.__servers[server_id].status.status:
+                        self.__notify_callback(
+                            title,
+                            f"Status changed from '{self.__servers[server_id].status.status}' to "
+                            f"'{server.status.status}'.",
+                        )
+
+                    if (
+                        server.status.address
+                        != self.__servers[server_id].status.address
+                    ):
+                        self.__notify_callback(
+                            title,
+                            f"Address from '{self.__servers[server_id].status.address}' to "
+                            f"'{server.status.address}'.",
+                        )
+
+                    if (
+                        server.status.version
+                        != self.__servers[server_id].status.version
+                    ):
+                        self.__notify_callback(
+                            title,
+                            f"Version from '{self.__servers[server_id].status.version}' to "
+                            f"'{server.status.version}'.",
+                        )
+
+                    if (
+                        server.status.update_available
+                        != self.__servers[server_id].status.update_available
+                    ):
+                        self.__notify_callback(
+                            title,
+                            "Update is available, please restart server.",
+                        )
+
             self.__servers = servers
 
             self.__data_received_event.set()
@@ -221,7 +272,7 @@ class NitradoServerProvider(ServerProviderInterface):
         servers: List[GameServer] = []
 
         for key, value in self.__servers.items():
-            name = f"{value.short_name}-{value.status.server_address}"
+            name = f"{value.short_name}-{value.status.address}"
             servers.append(
                 GameServer(server_provider=self, server_id=key, server_name=name)
             )

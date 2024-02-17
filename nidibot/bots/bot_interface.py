@@ -20,5 +20,9 @@ class BotInterface(ABC):
         pass
 
     @abstractmethod
+    def notify(self, title: str, message: str) -> None:
+        pass
+
+    @abstractmethod
     def activate(self) -> bool:
         pass

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -13,8 +13,8 @@ class ServerProviderConfiguration:
 @dataclass
 class ServerStatus:
     game_name: str = ""
-    game_version: str = ""
-    server_address: str = ""
+    version: str = ""
+    address: str = ""
     status: str = ""
     available_until: str = ""
     update_available: bool = False
@@ -24,6 +24,10 @@ class ServerStatus:
 
 
 class ServerProviderInterface(ABC):
+    @abstractmethod
+    def __init__(self, api_token: str, backup_directory: str, notify_callback):
+        pass
+
     @abstractmethod
     def _poll(self) -> None:
         pass

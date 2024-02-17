@@ -8,7 +8,11 @@ from nidibot.server_provider.server_provider_interface import (
 
 class ServerProviderFactory:
     @staticmethod
-    def create(configuration: ServerProviderConfiguration, root_backup_path: str):
+    def create(
+        configuration: ServerProviderConfiguration,
+        root_backup_path: str,
+        notify_callback,
+    ):
         server_providers = {
             "nitrado": NitradoServerProvider,
         }
@@ -20,17 +24,23 @@ class ServerProviderFactory:
             raise ValueError("Unknown bot type provided!")
 
         return server_providers[configuration.type](
-            api_token=configuration.token, backup_directory=root_backup_path
+            api_token=configuration.token,
+            backup_directory=root_backup_path,
+            notify_callback=notify_callback,
         )
 
     @staticmethod
-    def create_all(configuration_list: list, root_backup_path: str) -> list:
+    def create_all(
+        configuration_list: list, root_backup_path: str, notify_callback
+    ) -> list:
         server_providers: list = []
 
         for configuration in configuration_list:
             server_providers.append(
                 ServerProviderFactory.create(
-                    configuration=configuration, root_backup_path=root_backup_path
+                    configuration=configuration,
+                    root_backup_path=root_backup_path,
+                    notify_callback=notify_callback,
                 )
             )
 

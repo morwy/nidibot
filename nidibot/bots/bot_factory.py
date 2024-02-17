@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
 from typing import List
-from nidibot.bots.discord_bot import DiscordBot
+
 from nidibot.bots.bot_interface import BotConfiguration
+from nidibot.bots.discord_bot import DiscordBot
 from nidibot.server_provider.game_server import GameServer
 
 
