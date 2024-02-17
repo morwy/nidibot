@@ -130,3 +130,24 @@ class Nidibot:
                 current_working_folder,
                 dirs_exist_ok=True,
             )
+
+            #
+            # Modify path to working folder in "nidibot.service" file.
+            #
+            file_lines: list = []
+            service_filepath = os.path.join(current_working_folder, "nidibot.service")
+            with open(
+                file=service_filepath, mode="r", encoding="utf-8"
+            ) as service_file:
+                file_lines = service_file.readlines()
+
+            for line_index, line in enumerate(file_lines):
+                if "ExecStart=/user/bin/python3 /home/nidibot/start_bot.py" in line:
+                    script_filepath = os.path.join(current_working_folder, "start_bot.py")
+                    edited_line = f"ExecStart=/user/bin/python3 {script_filepath}\n"
+                    file_lines[line_index] = edited_line
+
+            with open(
+                file=service_filepath, mode="w", encoding="utf-8"
+            ) as service_file:
+                service_file.writelines(file_lines)
