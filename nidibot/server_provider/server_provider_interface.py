@@ -5,6 +5,12 @@ from abc import ABC, abstractmethod
 
 
 @dataclass
+class ServerProviderConfiguration:
+    type: str = ""
+    token: str = ""
+
+
+@dataclass
 class ServerStatus:
     game_name: str = ""
     game_version: str = ""
@@ -23,11 +29,11 @@ class ServerProviderInterface(ABC):
         pass
 
     @abstractmethod
-    def name(self) -> str:
+    def get_servers(self) -> list:
         pass
 
     @abstractmethod
-    def get_servers(self) -> list:
+    def name(self) -> str:
         pass
 
     @abstractmethod

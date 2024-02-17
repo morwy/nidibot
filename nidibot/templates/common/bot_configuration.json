@@ -1,10 +1,11 @@
 {
-    "controller": {
-        "discord": {
-            "token": "your-discord-bot-token",
+    "bots": [
+        {
+            "type": "discord",
+            "token": "your-bot-token",
             "privileged_users": []
         }
-    },
+    ],
     "server_provider": [
         {
             "type": "nitrado",

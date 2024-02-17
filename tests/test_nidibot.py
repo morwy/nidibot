@@ -33,4 +33,4 @@ def test_discord_connection(tmp_path):
         )
 
     bot = Nidibot(tmp_path)
-    bot.activate()
+    bot.start()

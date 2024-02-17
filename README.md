@@ -89,13 +89,14 @@ python3 -c 'from nidibot.nidibot import Nidibot; Nidibot.initialize_folder()'
 
 ```json
 {
-    "controller": {
-        "discord": {
+    "bots": [
+        {
+            "type": "discord",
             "token": "your-discord-bot-token",
             "privileged_users": []
         }
-    },
-    "server_provider": [
+    ],
+    "server_providers": [
         {
             "type": "nitrado",
             "token": "your-gameserver-api-token"

@@ -20,4 +20,4 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, shutdown_signal_handler)
 
     bot = Nidibot(os.path.dirname(os.path.realpath(__file__)))
-    bot.activate()
+    bot.start()
