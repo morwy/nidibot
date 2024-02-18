@@ -1,4 +1,8 @@
 {
+    "general": {
+        "backups_folder_path": "backups",
+        "logs_folder_path": "logs"
+    },
     "bots": [
         {
             "type": "discord",
@@ -9,7 +13,16 @@
     "server_provider": [
         {
             "type": "nitrado",
-            "token": "your-gameserver-api-token"
+            "token": "your-gameserver-api-token",
+            "timeout_seconds": 10,
+            "polling_seconds": 5,
+            "notifications": {
+                "on_new_server": true,
+                "on_status_change": true,
+                "on_address_change": true,
+                "on_version_change": true,
+                "on_update_available_change": true
+            }
         }
     ]
 }

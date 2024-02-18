@@ -17,6 +17,7 @@ import requests  # type: ignore
 
 from nidibot.server_provider.game_server import GameServer
 from nidibot.server_provider.server_provider_interface import (
+    ServerProviderConfiguration,
     ServerProviderInterface,
     ServerStatus,
 )
@@ -46,18 +47,21 @@ class NitradoServerInformation:
 
 
 class NitradoServerProvider(ServerProviderInterface):
-    def __init__(self, api_token: str, backup_directory: str, notify_callback):
-        if not api_token:
+    def __init__(
+        self,
+        configuration: ServerProviderConfiguration,
+        backup_directory: str,
+        notify_callback,
+    ):
+        if not configuration.token:
             raise ValueError("API token value is required for nidibot start!")
 
         if not backup_directory:
             raise ValueError("Backup directory value is required for nidibot start!")
 
-        self.__api_token = api_token
+        self.__configuration = configuration
         self.__backup_directory = backup_directory
         self.__notify_callback = notify_callback
-        self.__default_timeout_seconds = 10
-        self.__default_polling_seconds = 5
 
         self.__servers: Dict[str, NitradoServerInformation] = {}
 
@@ -106,10 +110,10 @@ class NitradoServerProvider(ServerProviderInterface):
         service_list = []
 
         try:
-            headers = {"Authorization": self.__api_token}
+            headers = {"Authorization": self.__configuration.token}
             response = requests.get(
                 "https://api.nitrado.net/services",
-                timeout=self.__default_timeout_seconds,
+                timeout=self.__configuration.timeout_seconds,
                 headers=headers,
             )
 
@@ -144,10 +148,10 @@ class NitradoServerProvider(ServerProviderInterface):
             services = self.__get_services()
             for service in services:
                 try:
-                    headers = {"Authorization": self.__api_token}
+                    headers = {"Authorization": self.__configuration.token}
                     response = requests.get(
                         f"https://api.nitrado.net/services/{service.id}/gameservers",
-                        timeout=self.__default_timeout_seconds,
+                        timeout=self.__configuration.timeout_seconds,
                         headers=headers,
                     )
 
@@ -219,12 +223,19 @@ class NitradoServerProvider(ServerProviderInterface):
 
                     title += f" - {server.status.address}"
 
-                    if server_id not in self.__servers:
+                    if (
+                        self.__configuration.notifications.on_new_server
+                        and server_id not in self.__servers
+                    ):
                         self.__notify_callback(
                             title, "New game server appeared, please configure it."
                         )
 
-                    if server.status.status != self.__servers[server_id].status.status:
+                    if (
+                        self.__configuration.notifications.on_status_change
+                        and server.status.status
+                        != self.__servers[server_id].status.status
+                    ):
                         self.__notify_callback(
                             title,
                             f"Status changed from '{self.__servers[server_id].status.status}' to "
@@ -232,7 +243,8 @@ class NitradoServerProvider(ServerProviderInterface):
                         )
 
                     if (
-                        server.status.address
+                        self.__configuration.notifications.on_address_change
+                        and server.status.address
                         != self.__servers[server_id].status.address
                     ):
                         self.__notify_callback(
@@ -242,7 +254,8 @@ class NitradoServerProvider(ServerProviderInterface):
                         )
 
                     if (
-                        server.status.version
+                        self.__configuration.notifications.on_version_change
+                        and server.status.version
                         != self.__servers[server_id].status.version
                     ):
                         self.__notify_callback(
@@ -252,7 +265,8 @@ class NitradoServerProvider(ServerProviderInterface):
                         )
 
                     if (
-                        server.status.update_available
+                        self.__configuration.notifications.on_update_available_change
+                        and server.status.update_available
                         != self.__servers[server_id].status.update_available
                     ):
                         self.__notify_callback(
@@ -263,7 +277,7 @@ class NitradoServerProvider(ServerProviderInterface):
             self.__servers = servers
 
             self.__data_received_event.set()
-            self.__stopping_event.wait(self.__default_polling_seconds)
+            self.__stopping_event.wait(self.__configuration.polling_seconds)
 
     def name(self) -> str:
         return "Nitrado"
@@ -287,10 +301,10 @@ class NitradoServerProvider(ServerProviderInterface):
 
     def stop(self, server_id: str = "") -> bool:
         try:
-            headers = {"Authorization": self.__api_token}
+            headers = {"Authorization": self.__configuration.token}
             response = requests.post(
                 f"https://api.nitrado.net/services/{server_id}/gameservers/stop",
-                timeout=self.__default_timeout_seconds,
+                timeout=self.__configuration.timeout_seconds,
                 headers=headers,
             )
 
@@ -310,10 +324,10 @@ class NitradoServerProvider(ServerProviderInterface):
 
     def restart(self, server_id: str = "") -> bool:
         try:
-            headers = {"Authorization": self.__api_token}
+            headers = {"Authorization": self.__configuration.token}
             response = requests.post(
                 f"https://api.nitrado.net/services/{server_id}/gameservers/restart",
-                timeout=self.__default_timeout_seconds,
+                timeout=self.__configuration.timeout_seconds,
                 headers=headers,
             )
 
@@ -337,7 +351,10 @@ class NitradoServerProvider(ServerProviderInterface):
             with tempfile.TemporaryDirectory() as temp_folder_path:
                 datetime_now = datetime.now()
                 datetime_str = datetime_now.strftime("%Y%m%d_%H%M%S")
-                backup_filename = f"{self.name().lower()}_{self.__servers[server_id].short_name}_id-{server_id}_{datetime_str}"
+                backup_filename = (
+                    f"{self.name().lower()}_{self.__servers[server_id].short_name}_"
+                    f"id-{server_id}_{datetime_str}"
+                )
                 local_path = os.path.join(temp_folder_path, backup_filename)
                 pathlib.Path(local_path).mkdir(parents=True, exist_ok=True)
 

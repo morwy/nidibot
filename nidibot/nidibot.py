@@ -23,7 +23,14 @@ from nidibot.server_provider.server_provider_interface import (
 
 
 @dataclass
+class GeneralConfiguration:
+    backups_folder_path: str = ""
+    logs_folder_path: str = ""
+
+
+@dataclass
 class NidibotConfiguration:
+    general: GeneralConfiguration = field(default_factory=GeneralConfiguration)
     bots: List[BotConfiguration] = field(default_factory=list)
     server_providers: List[ServerProviderConfiguration] = field(default_factory=list)
 
@@ -34,14 +41,17 @@ class Nidibot:
             raise ValueError("Working directory value is required for nidibot start!")
 
         self.__working_folder_path = working_folder_path
-        self.__configuration: NidibotConfiguration = NidibotConfiguration()
+        self.__configuration: NidibotConfiguration = (
+            self.__parse_configuration_json_file()
+        )
 
         self.__initialize_logging()
 
         root_backup_path = os.path.join(self.__working_folder_path, "backups")
-        pathlib.Path(root_backup_path).mkdir(parents=True, exist_ok=True)
+        if os.path.isabs(self.__configuration.general.backups_folder_path):
+            root_backup_path = self.__configuration.general.backups_folder_path
 
-        self.__configuration = self.__parse_configuration_json_file()
+        pathlib.Path(root_backup_path).mkdir(parents=True, exist_ok=True)
 
         self.__bots: List[BotInterface] = []
 
@@ -66,11 +76,29 @@ class Nidibot:
         if len(self.__bots) == 0:
             raise ValueError("At least one bot is required!")
 
+    def __parse_configuration_json_file(self) -> NidibotConfiguration:
+        configuration_filepath = os.path.join(
+            self.__working_folder_path, "bot_configuration.json"
+        )
+
+        with open(configuration_filepath, "r", encoding="utf-8") as json_file:
+            configuration_json = json.load(json_file)
+
+        configuration = from_dict(
+            data_class=NidibotConfiguration,
+            data=configuration_json,
+        )
+
+        return configuration
+
     def __initialize_logging(self) -> None:
         #
         # Enable daily logging both to file and stdout.
         #
         log_directory = os.path.join(self.__working_folder_path, "logs")
+        if os.path.isabs(self.__configuration.general.logs_folder_path):
+            log_directory = self.__configuration.general.logs_folder_path
+
         pathlib.Path(log_directory).mkdir(parents=True, exist_ok=True)
 
         filename = "nidibot.log"
@@ -89,21 +117,6 @@ class Nidibot:
         logging.getLogger("lightbulb").setLevel(logging.WARNING)
         logging.getLogger("requests").setLevel(logging.WARNING)
         logging.getLogger("urllib3").setLevel(logging.WARNING)
-
-    def __parse_configuration_json_file(self) -> NidibotConfiguration:
-        configuration_filepath = os.path.join(
-            self.__working_folder_path, "bot_configuration.json"
-        )
-
-        with open(configuration_filepath, "r", encoding="utf-8") as json_file:
-            configuration_json = json.load(json_file)
-
-        configuration = from_dict(
-            data_class=NidibotConfiguration,
-            data=configuration_json,
-        )
-
-        return configuration
 
     def __notify_callback(self, title: str, message: str):
         for bot in self.__bots:

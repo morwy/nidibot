@@ -89,6 +89,10 @@ python3 -c 'from nidibot.nidibot import Nidibot; Nidibot.initialize_folder()'
 
 ```json
 {
+    "general": {
+        "backups_folder_path": "backups",
+        "logs_folder_path": "logs"
+    },
     "bots": [
         {
             "type": "discord",
@@ -99,7 +103,16 @@ python3 -c 'from nidibot.nidibot import Nidibot; Nidibot.initialize_folder()'
     "server_providers": [
         {
             "type": "nitrado",
-            "token": "your-gameserver-api-token"
+            "token": "your-gameserver-api-token",
+            "timeout_seconds": 10,
+            "polling_seconds": 5,
+            "notifications": {
+                "on_new_server": true,
+                "on_status_change": true,
+                "on_address_change": true,
+                "on_version_change": true,
+                "on_update_available_change": true
+            }
         }
     ]
 }

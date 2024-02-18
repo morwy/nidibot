@@ -24,7 +24,7 @@ class ServerProviderFactory:
             raise ValueError("Unknown bot type provided!")
 
         return server_providers[configuration.type](
-            api_token=configuration.token,
+            configuration=configuration,
             backup_directory=root_backup_path,
             notify_callback=notify_callback,
         )
