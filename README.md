@@ -101,11 +101,7 @@ python3 -c 'from nidibot.nidibot import Nidibot; Nidibot.initialize_folder()'
             "type": "nitrado",
             "token": "your-gameserver-api-token"
         }
-    ],
-    "storage": {
-        "type": "google-drive",
-        "token": "your-storage-token"
-    }
+    ]
 }
 ```
 

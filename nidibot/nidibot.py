@@ -23,16 +23,9 @@ from nidibot.server_provider.server_provider_interface import (
 
 
 @dataclass
-class StorageConfiguration:
-    type: str = ""
-    token: str = ""
-
-
-@dataclass
 class NidibotConfiguration:
     bots: List[BotConfiguration] = field(default_factory=list)
     server_providers: List[ServerProviderConfiguration] = field(default_factory=list)
-    storage: StorageConfiguration = field(default_factory=StorageConfiguration)
 
 
 class Nidibot:
