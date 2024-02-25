@@ -31,11 +31,15 @@ nidibot supports following commands:
 
 Provides extended information about game server status.
 
+---
+
 ```batch
 /start [OPTIONAL:name]
 ```
 
 Starts server if it is offline, restarts server if it is online.
+
+---
 
 ```batch
 /stop [OPTIONAL:name]
@@ -43,17 +47,31 @@ Starts server if it is offline, restarts server if it is online.
 
 Stops server if it is online.
 
+---
+
 ```batch
 /restart [OPTIONAL:name]
 ```
 
 Restarts server if it is online, starts server if it is offline.
 
+---
+
 ```batch
-/backup [OPTIONAL:name]
+/backup_create [OPTIONAL:name]
 ```
 
-Creates backup of games server files and uploads them to storage. Backed up files are stored in the working folder of bot under **backup** folder.
+Creates backup of games server files. Backed up files are stored in the working folder of bot under **backup** folder.
+
+---
+
+```batch
+/backup_list [OPTIONAL:name]
+```
+
+Lists available backups of specific game server.
+
+---
 
 Each command supports optional argument **name**. It is a convenience argument in case you have multiple game servers connected to the bot at once. In case if no name is specified, the command is applied to the first game server in the list.
 

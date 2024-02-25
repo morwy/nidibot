@@ -22,7 +22,6 @@ class BotConfiguration:
 
 
 class BotInterface(ABC):
-    @abstractmethod
     def __init__(self, configuration: BotConfiguration, game_servers: List[GameServer]):
         self._configuration = configuration
         self._game_servers = game_servers
@@ -30,6 +29,8 @@ class BotInterface(ABC):
         self._game_server_names: list = []
         for game_server in self._game_servers:
             self._game_server_names.append(game_server.name())
+
+        self._backup_timestamps: dict = {}
 
         self._notify_mutex = Lock()
         self._notify_messages: List[BotForwardMessage] = []

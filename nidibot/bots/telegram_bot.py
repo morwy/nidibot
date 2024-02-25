@@ -35,8 +35,8 @@ class TelegramBot(BotInterface):
         self.__bot.add_handler(CommandHandler("start", self.__start))
         self.__bot.add_handler(CommandHandler("stop", self.__stop))
         self.__bot.add_handler(CommandHandler("restart", self.__restart))
-        self.__bot.add_handler(CommandHandler("backup", self.__backup))
-        self.__bot.add_handler(CommandHandler("backup", self.__backup))
+        self.__bot.add_handler(CommandHandler("backup_create", self.__backup_create))
+        self.__bot.add_handler(CommandHandler("backup_list", self.__backup_list))
 
     def __concatenate_sequences(
         self, sequence1: Sequence, sequence2: Sequence
@@ -59,8 +59,12 @@ class TelegramBot(BotInterface):
                 "Restarts server if it is online, starts server if it is offline.",
             ),
             BotCommand(
-                "backup",
+                "backup_create",
                 "Creates backup of games server files and uploads them to storage.",
+            ),
+            BotCommand(
+                "backup_list",
+                "Lists available backups of specific game server.",
             ),
         ]
         await application.bot.set_my_commands(commands)
@@ -328,7 +332,7 @@ class TelegramBot(BotInterface):
 
         game_server.restart()
 
-    async def __backup(
+    async def __backup_create(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
     ) -> None:
         args = []
@@ -347,12 +351,12 @@ class TelegramBot(BotInterface):
 
         chat_id = update.effective_message.chat_id
 
-        logging.debug("Called 'backup' by '%s'.", username)
+        logging.debug("Called 'backup_create' by '%s'.", username)
 
         if len(args) == 0:
             reply_keyboard = [[]]  # type: ignore
             for game_server in self._game_server_names:
-                sub_keyboard = [[f"/backup {game_server}"]]
+                sub_keyboard = [[f"/backup_create {game_server}"]]
                 reply_keyboard = self.__concatenate_sequences(reply_keyboard, sub_keyboard)  # type: ignore
 
             markup = ReplyKeyboardMarkup(
@@ -401,6 +405,62 @@ class TelegramBot(BotInterface):
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
+
+    async def __backup_list(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        args = []
+        if context.args is not None:
+            args = context.args
+
+        if update.effective_user is None or update.effective_user.username is None:
+            logging.critical("No username in incoming message!")
+            return
+
+        username = update.effective_user.username
+
+        if update.effective_message is None or update.effective_message.chat_id is None:
+            logging.critical("No chat_id in incoming message!")
+            return
+
+        chat_id = update.effective_message.chat_id
+
+        logging.debug("Called 'backup_list' by '%s'.", username)
+
+        if len(args) == 0:
+            reply_keyboard = [[]]  # type: ignore
+            for game_server in self._game_server_names:
+                sub_keyboard = [[f"/backup_list {game_server}"]]
+                reply_keyboard = self.__concatenate_sequences(reply_keyboard, sub_keyboard)  # type: ignore
+
+            markup = ReplyKeyboardMarkup(
+                reply_keyboard,
+                one_time_keyboard=False,
+                resize_keyboard=True,
+            )
+
+            await context.bot.send_message(
+                chat_id,
+                text=r"Please select server\!",
+                parse_mode=ParseMode.MARKDOWN_V2,
+                reply_markup=markup,
+            )
+            return
+
+        game_server = self._get_game_server(args[0])
+
+        self._backup_timestamps[args[0]] = game_server.list_backups()
+
+        backup_sum_message = "Available backups:\n"
+        for backup in self._backup_timestamps[args[0]]:
+            backup_sum_message += f"\- {escape_markdown(backup, version=2)}\n"
+
+        await context.bot.send_message(
+            chat_id,
+            text=backup_sum_message,
+            parse_mode=ParseMode.MARKDOWN_V2,
+            reply_markup=ReplyKeyboardRemove(),
+        )
 
     def notify(self, title: str, message: str) -> None:
         with self._notify_mutex:

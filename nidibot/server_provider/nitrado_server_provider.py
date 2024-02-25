@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import glob
 import json
 import logging
 import os
@@ -165,7 +166,7 @@ class NitradoServerProvider(ServerProviderInterface):
                     query_dict = gameserver_dict["query"]
 
                     server: NitradoServerInformation = NitradoServerInformation()
-                    server.id = service.id
+                    server.id = str(service.id)
                     server.short_name = service.short_name
                     server.status.game_name = gameserver_dict["game_human"]
                     server.status.update_available = (
@@ -390,5 +391,33 @@ class NitradoServerProvider(ServerProviderInterface):
 
         return True
 
-    def restore_backup(self, server_id: str = "") -> bool:
+    def restore_backup(self, server_id: str = "", timestamp: str = "") -> bool:
         return False
+
+    def list_backups(self, server_id: str = "") -> list:
+        wildcard_path = os.path.join(self.__backup_directory, "*" + server_id + "*")
+        file_list = glob.glob(wildcard_path)
+
+        timestamp_list: list = []
+        for filepath in file_list:
+            pathlib_filepath = pathlib.Path(filepath)
+            extension = pathlib_filepath.suffix
+            filename = pathlib_filepath.name.replace(extension, "")
+            filename_parts = filename.split("_")
+            if len(filename_parts) < 2:
+                continue
+
+            date_str = filename_parts[-2]
+            time_str = filename_parts[-1]
+
+            date_val = datetime.strptime(date_str, "%Y%m%d")
+            time_val = datetime.strptime(time_str, "%H%M%S")
+
+            timestamp_list.append(
+                f"{date_val.strftime('%Y-%m-%d')} {time_val.strftime('%H:%M:%S')}"
+            )
+
+        timestamp_list.sort()
+        timestamp_list.reverse()
+
+        return timestamp_list

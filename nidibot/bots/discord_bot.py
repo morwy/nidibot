@@ -228,12 +228,12 @@ class DiscordBot(BotInterface):
             required=False,
         )
         @lightbulb.command(
-            name="backup",
-            description="Creates backup of games server files and uploads them to storage.",
+            name="backup_create",
+            description="Creates backup of game server files and uploads them to storage.",
         )
         @lightbulb.implements(lightbulb.SlashCommand)
-        async def backup(ctx) -> None:
-            logging.debug("Called 'backup' by '%s'.", ctx.author)
+        async def backup_create(ctx) -> None:
+            logging.debug("Called 'backup_create' by '%s'.", ctx.author)
 
             game_server = self._get_game_server(ctx.options.name)
             title = self._get_response_title(game_server)
@@ -269,6 +269,37 @@ class DiscordBot(BotInterface):
                     color=hikari.colors.Color(self.__color_red),
                 )
 
+            await ctx.respond(embed=embed)
+
+        @self.__bot.command
+        @lightbulb.option(
+            name="name",
+            description="States server to which command will be applied",
+            choices=self._game_server_names,
+            required=False,
+        )
+        @lightbulb.command(
+            name="backup_list",
+            description="Lists available backups of specific game server.",
+        )
+        @lightbulb.implements(lightbulb.SlashCommand)
+        async def backup_list(ctx) -> None:
+            logging.debug("Called 'backup_list' by '%s'.", ctx.author)
+
+            game_server = self._get_game_server(ctx.options.name)
+            title = self._get_response_title(game_server)
+
+            self._backup_timestamps[ctx.options.name] = game_server.list_backups()
+
+            backup_sum_message = "**Available backups:**\n"
+            for backup_timestamp in self._backup_timestamps[ctx.options.name]:
+                backup_sum_message += f"* {backup_timestamp}\n"
+
+            embed = hikari.Embed(
+                title=title,
+                description=backup_sum_message,
+                color=hikari.colors.Color(self.__color_orange),
+            )
             await ctx.respond(embed=embed)
 
         @tasks.task(s=5, auto_start=True)

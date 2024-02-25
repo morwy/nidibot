@@ -80,5 +80,9 @@ class ServerProviderInterface(ABC):
         pass
 
     @abstractmethod
-    def restore_backup(self, server_id: str = "") -> bool:
+    def restore_backup(self, server_id: str = "", timestamp: str = "") -> bool:
+        pass
+
+    @abstractmethod
+    def list_backups(self, server_id: str = "") -> list:
         pass
