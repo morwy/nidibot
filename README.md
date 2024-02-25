@@ -16,6 +16,11 @@ nidibot is a simple to install and configure bot for controlling your game serve
 * Easy setup - install ready-made nidibot package from PyPI and call `initalize_folder()`.
 * Simple configuration - everything is located in `bot_configufation.json` file in bot folder.
 
+### Limitations
+
+* Telegram bot does not support automatic notification about game server status changes.
+* There can be only one Telegram bot at the time. There is currently unresolved issue with running Telegram bot in thread.
+
 ### Commands
 
 nidibot supports following commands:
