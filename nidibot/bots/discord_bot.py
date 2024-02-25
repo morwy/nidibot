@@ -11,14 +11,8 @@ import lightbulb
 import pkg_resources  # type: ignore
 from lightbulb.ext import tasks
 
-from nidibot.bots.bot_interface import BotConfiguration, BotInterface
+from nidibot.bots.bot_interface import BotConfiguration, BotInterface, NotifyMessage
 from nidibot.server_provider.game_server import GameServer
-
-
-@dataclass
-class NotifyMessage:
-    title: str = ""
-    message: str = ""
 
 
 class DiscordBot(BotInterface):
@@ -51,6 +45,16 @@ class DiscordBot(BotInterface):
 
             return title
 
+        def get_game_server(server_name: str) -> GameServer:
+            if not server_name:
+                game_server = self.__game_servers[0]
+            else:
+                game_server = next(
+                    x for x in self.__game_servers if x.name() == server_name
+                )
+
+            return game_server
+
         @self.__bot.listen(hikari.StartedEvent)
         async def on_started(_) -> None:
             try:
@@ -74,14 +78,7 @@ class DiscordBot(BotInterface):
         async def status(ctx) -> None:
             logging.debug("Called 'status' by '%s'.", ctx.author)
 
-            server_name = ctx.options.name
-            if server_name is None:
-                game_server = self.__game_servers[0]
-            else:
-                game_server = next(
-                    x for x in self.__game_servers if x.name() == server_name
-                )
-
+            game_server = get_game_server(ctx.options.name)
             server_status = game_server.status()
 
             title = get_embed_title(game_server)
@@ -128,7 +125,6 @@ class DiscordBot(BotInterface):
 
             date_time = server_status.available_until.split(" ")
             date_parts = date_time[0].split("-")
-
             d0 = date(datetime.now().year, datetime.now().month, datetime.now().day)
             d1 = date(int(date_parts[0]), int(date_parts[1]), int(date_parts[2]))
             delta = d1 - d0
@@ -161,14 +157,7 @@ class DiscordBot(BotInterface):
         async def start(ctx) -> None:
             logging.debug("Called 'start' by '%s'.", ctx.author)
 
-            server_name = ctx.options.name
-            if server_name is None:
-                game_server = self.__game_servers[0]
-            else:
-                game_server = next(
-                    x for x in self.__game_servers if x.name() == server_name
-                )
-
+            game_server = get_game_server(ctx.options.name)
             title = get_embed_title(game_server)
 
             user = str(ctx.author)
@@ -206,14 +195,7 @@ class DiscordBot(BotInterface):
         async def stop(ctx) -> None:
             logging.debug("Called 'stop' by '%s'.", ctx.author)
 
-            server_name = ctx.options.name
-            if server_name is None:
-                game_server = self.__game_servers[0]
-            else:
-                game_server = next(
-                    x for x in self.__game_servers if x.name() == server_name
-                )
-
+            game_server = get_game_server(ctx.options.name)
             title = get_embed_title(game_server)
 
             user = str(ctx.author)
@@ -251,14 +233,7 @@ class DiscordBot(BotInterface):
         async def restart(ctx) -> None:
             logging.debug("Called 'restart' by '%s'.", ctx.author)
 
-            server_name = ctx.options.name
-            if server_name is None:
-                game_server = self.__game_servers[0]
-            else:
-                game_server = next(
-                    x for x in self.__game_servers if x.name() == server_name
-                )
-
+            game_server = get_game_server(ctx.options.name)
             title = get_embed_title(game_server)
 
             user = str(ctx.author)
@@ -296,14 +271,7 @@ class DiscordBot(BotInterface):
         async def backup(ctx) -> None:
             logging.debug("Called 'backup' by '%s'.", ctx.author)
 
-            server_name = ctx.options.name
-            if server_name is None:
-                game_server = self.__game_servers[0]
-            else:
-                game_server = next(
-                    x for x in self.__game_servers if x.name() == server_name
-                )
-
+            game_server = get_game_server(ctx.options.name)
             title = get_embed_title(game_server)
 
             user = str(ctx.author)

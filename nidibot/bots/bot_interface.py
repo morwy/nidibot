@@ -8,6 +8,12 @@ from nidibot.server_provider.game_server import GameServer
 
 
 @dataclass
+class NotifyMessage:
+    title: str = ""
+    message: str = ""
+
+
+@dataclass
 class BotConfiguration:
     type: str = ""
     token: str = ""

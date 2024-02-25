@@ -4,9 +4,17 @@
 
 ## Description
 
-nidibot is a simple to install and configure bot for controlling your game servers from any messaging platform. **Any** is a bit of exaggeration here, since only Discord is supported.
+nidibot is a simple to install and configure bot for controlling your game servers from any messaging platform. **Any** is a bit of exaggeration here, since only Discord and Telegram is supported.
 
 **nidibot** name was derived from **Ni**trado, **Di**scord and **bot** - game server provider and messaging platform for which this bot was written originally.
+
+### Features
+
+* A minimalistic set of fundamental commands - everything you need to run and manage your game server.
+* Possibility of connecting unlimited (somewhat) amount of game server providers and bots.
+* High extensibility for game server providers and bots - just add a new class for missing game server provider or bot and make a PR.
+* Easy setup - install ready-made nidibot package from PyPI and call `initalize_folder()`.
+* Simple configuration - everything is located in `bot_configufation.json` file in bot folder.
 
 ### Commands
 

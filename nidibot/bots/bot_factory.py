@@ -4,6 +4,7 @@ from typing import List
 
 from nidibot.bots.bot_interface import BotConfiguration
 from nidibot.bots.discord_bot import DiscordBot
+from nidibot.bots.telegram_bot import TelegramBot
 from nidibot.server_provider.game_server import GameServer
 
 
@@ -12,6 +13,7 @@ class BotFactory:
     def create(configuration: BotConfiguration, game_servers: List[GameServer]):
         bots = {
             "discord": DiscordBot,
+            "telegram": TelegramBot,
         }
 
         if configuration.type not in bots:
