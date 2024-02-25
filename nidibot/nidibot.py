@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from logging.handlers import TimedRotatingFileHandler
 from typing import List
 
+import pkg_resources  # type: ignore
 from dacite import from_dict
 
 from nidibot.bots.bot_factory import BotFactory
@@ -123,6 +124,12 @@ class Nidibot:
             bot.notify(title, message)
 
     def start(self) -> None:
+        try:
+            nidibot_version = pkg_resources.get_distribution("nidibot").version
+            logging.info("nidibot v%s was started.", nidibot_version)
+        except pkg_resources.DistributionNotFound:
+            logging.debug("nidibot was started.")
+
         for bot in self.__bots:
             bot.activate()
 

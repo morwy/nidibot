@@ -1,73 +1,37 @@
 #!/usr/bin/env python
 
 import logging
-from dataclasses import dataclass
 from datetime import date, datetime
-from multiprocessing import Lock
 from typing import List
 
 import hikari
 import lightbulb
-import pkg_resources  # type: ignore
 from lightbulb.ext import tasks
 
-from nidibot.bots.bot_interface import BotConfiguration, BotInterface, NotifyMessage
+from nidibot.bots.bot_interface import BotConfiguration, BotForwardMessage, BotInterface
 from nidibot.server_provider.game_server import GameServer
 
 
 class DiscordBot(BotInterface):
     def __init__(self, configuration: BotConfiguration, game_servers: List[GameServer]):
-        self.__configuration = configuration
-        self.__game_servers = game_servers
+        super().__init__(configuration=configuration, game_servers=game_servers)
 
-        self.__game_server_names: list = []
-        for game_server in self.__game_servers:
-            self.__game_server_names.append(game_server.name())
-
-        self.__notify_mutex = Lock()
-        self.__notify_messages: List[NotifyMessage] = []
-
-        self.__bot = lightbulb.BotApp(token=self.__configuration.token)
+        self.__bot = lightbulb.BotApp(token=self._configuration.token)
         tasks.load(self.__bot)
 
         self.__color_green = 0x37CB78
         self.__color_orange = 0xE67E22
         self.__color_red = 0xE64A42
 
-        def get_embed_title(game_server) -> str:
-            server_status = game_server.status()
-
-            title = f"{server_status.game_name}"
-            if server_status.version:
-                title += f" ({server_status.version})"
-
-            title += f" - {server_status.address}"
-
-            return title
-
-        def get_game_server(server_name: str) -> GameServer:
-            if not server_name:
-                game_server = self.__game_servers[0]
-            else:
-                game_server = next(
-                    x for x in self.__game_servers if x.name() == server_name
-                )
-
-            return game_server
-
         @self.__bot.listen(hikari.StartedEvent)
         async def on_started(_) -> None:
-            try:
-                nidibot_version = pkg_resources.get_distribution("nidibot").version
-                logging.info("nidibot v%s was started.", nidibot_version)
-            except pkg_resources.DistributionNotFound:
-                logging.debug("nidibot was started.")
+            logging.info("Discord bot started and connected.")
 
         @self.__bot.command
         @lightbulb.option(
             name="name",
             description="States server to which command will be applied",
-            choices=self.__game_server_names,
+            choices=self._game_server_names,
             required=False,
         )
         @lightbulb.command(
@@ -78,10 +42,10 @@ class DiscordBot(BotInterface):
         async def status(ctx) -> None:
             logging.debug("Called 'status' by '%s'.", ctx.author)
 
-            game_server = get_game_server(ctx.options.name)
+            game_server = self._get_game_server(ctx.options.name)
             server_status = game_server.status()
 
-            title = get_embed_title(game_server)
+            title = self._get_response_title(game_server)
 
             if server_status.status == "online":
                 status_smiley = ":white_check_mark:"
@@ -146,7 +110,7 @@ class DiscordBot(BotInterface):
         @lightbulb.option(
             name="name",
             description="States server to which command will be applied",
-            choices=self.__game_server_names,
+            choices=self._game_server_names,
             required=False,
         )
         @lightbulb.command(
@@ -157,11 +121,11 @@ class DiscordBot(BotInterface):
         async def start(ctx) -> None:
             logging.debug("Called 'start' by '%s'.", ctx.author)
 
-            game_server = get_game_server(ctx.options.name)
-            title = get_embed_title(game_server)
+            game_server = self._get_game_server(ctx.options.name)
+            title = self._get_response_title(game_server)
 
             user = str(ctx.author)
-            if user not in self.__configuration.privileged_users:
+            if user not in self._configuration.privileged_users:
                 embed = hikari.Embed(
                     title=title,
                     description="Sorry but you don't have rights to call this command! :liar:",
@@ -184,7 +148,7 @@ class DiscordBot(BotInterface):
         @lightbulb.option(
             name="name",
             description="States server to which command will be applied",
-            choices=self.__game_server_names,
+            choices=self._game_server_names,
             required=False,
         )
         @lightbulb.command(
@@ -195,11 +159,11 @@ class DiscordBot(BotInterface):
         async def stop(ctx) -> None:
             logging.debug("Called 'stop' by '%s'.", ctx.author)
 
-            game_server = get_game_server(ctx.options.name)
-            title = get_embed_title(game_server)
+            game_server = self._get_game_server(ctx.options.name)
+            title = self._get_response_title(game_server)
 
             user = str(ctx.author)
-            if user not in self.__configuration.privileged_users:
+            if user not in self._configuration.privileged_users:
                 embed = hikari.Embed(
                     title=title,
                     description="Sorry but you don't have rights to call this command! :liar:",
@@ -222,7 +186,7 @@ class DiscordBot(BotInterface):
         @lightbulb.option(
             name="name",
             description="States server to which command will be applied",
-            choices=self.__game_server_names,
+            choices=self._game_server_names,
             required=False,
         )
         @lightbulb.command(
@@ -233,11 +197,11 @@ class DiscordBot(BotInterface):
         async def restart(ctx) -> None:
             logging.debug("Called 'restart' by '%s'.", ctx.author)
 
-            game_server = get_game_server(ctx.options.name)
-            title = get_embed_title(game_server)
+            game_server = self._get_game_server(ctx.options.name)
+            title = self._get_response_title(game_server)
 
             user = str(ctx.author)
-            if user not in self.__configuration.privileged_users:
+            if user not in self._configuration.privileged_users:
                 embed = hikari.Embed(
                     title=title,
                     description="Sorry but you don't have rights to call this command! :liar:",
@@ -260,7 +224,7 @@ class DiscordBot(BotInterface):
         @lightbulb.option(
             name="name",
             description="States server to which command will be applied",
-            choices=self.__game_server_names,
+            choices=self._game_server_names,
             required=False,
         )
         @lightbulb.command(
@@ -271,11 +235,11 @@ class DiscordBot(BotInterface):
         async def backup(ctx) -> None:
             logging.debug("Called 'backup' by '%s'.", ctx.author)
 
-            game_server = get_game_server(ctx.options.name)
-            title = get_embed_title(game_server)
+            game_server = self._get_game_server(ctx.options.name)
+            title = self._get_response_title(game_server)
 
             user = str(ctx.author)
-            if user not in self.__configuration.privileged_users:
+            if user not in self._configuration.privileged_users:
                 embed = hikari.Embed(
                     title=title,
                     description="Sorry but you don't have rights to call this command! :liar:",
@@ -309,10 +273,10 @@ class DiscordBot(BotInterface):
 
         @tasks.task(s=5, auto_start=True)
         async def notify_loop():
-            local_notify_messages: List[NotifyMessage] = []
-            with self.__notify_mutex:
-                local_notify_messages = self.__notify_messages
-                self.__notify_messages = []
+            local_notify_messages: List[BotForwardMessage] = []
+            with self._notify_mutex:
+                local_notify_messages = self._notify_messages
+                self._notify_messages = []
 
             if len(local_notify_messages) == 0:
                 return
@@ -341,11 +305,11 @@ class DiscordBot(BotInterface):
                         logging.exception(exception)
 
     def notify(self, title: str, message: str) -> None:
-        with self.__notify_mutex:
-            notify_message: NotifyMessage = NotifyMessage()
+        with self._notify_mutex:
+            notify_message: BotForwardMessage = BotForwardMessage()
             notify_message.title = title
             notify_message.message = message
-            self.__notify_messages.append(notify_message)
+            self._notify_messages.append(notify_message)
 
     def activate(self) -> bool:
         try:

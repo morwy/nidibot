@@ -3,37 +3,20 @@
 import logging
 from datetime import date, datetime
 from itertools import chain
-from multiprocessing import Lock
 from typing import List, Sequence
 
 from telegram import BotCommand, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram.constants import ParseMode
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    ContextTypes,
-    MessageHandler,
-    filters,
-)
+from telegram.ext import Application, CommandHandler, ContextTypes
 from telegram.helpers import escape_markdown
 
-from nidibot.bots.bot_interface import BotConfiguration, BotInterface, NotifyMessage
+from nidibot.bots.bot_interface import BotConfiguration, BotForwardMessage, BotInterface
 from nidibot.server_provider.game_server import GameServer
 
 
 class TelegramBot(BotInterface):
     def __init__(self, configuration: BotConfiguration, game_servers: List[GameServer]):
-        self.__configuration = configuration
-        self.__game_servers = game_servers
-
-        self.__game_server_names: list = []
-        for game_server in self.__game_servers:
-            self.__game_server_names.append(game_server.name())
-
-        self.__notify_mutex = Lock()
-        self.__notify_messages: List[NotifyMessage] = []
-
-        self.__connected_channels: list = []
+        super().__init__(configuration=configuration, game_servers=game_servers)
 
         logging.getLogger("httpx").setLevel(logging.WARNING)
         logging.getLogger("telegram").setLevel(logging.WARNING)
@@ -43,7 +26,7 @@ class TelegramBot(BotInterface):
 
         self.__bot = (
             Application.builder()
-            .token(self.__configuration.token)
+            .token(self._configuration.token)
             .post_init(self.__publish_commands)
             .build()
         )
@@ -63,27 +46,6 @@ class TelegramBot(BotInterface):
     ) -> Sequence:
         sequence_type = type(sequence1)
         return sequence_type(chain(sequence1, sequence2))  # type: ignore
-
-    def __get_response_title(self, game_server: GameServer) -> str:
-        server_status = game_server.status()
-
-        title = f"{server_status.game_name}"
-        if server_status.version:
-            title += f" ({server_status.version})"
-
-        title += f" - {server_status.address}"
-
-        return title
-
-    def __get_game_server(self, server_name: str = "") -> GameServer:
-        if not server_name:
-            game_server = self.__game_servers[0]
-        else:
-            game_server = next(
-                x for x in self.__game_servers if x.name() == server_name
-            )
-
-        return game_server
 
     async def __publish_commands(self, application: Application) -> None:
         commands = [
@@ -129,7 +91,7 @@ class TelegramBot(BotInterface):
 
         if len(args) == 0:
             reply_keyboard = [[]]  # type: ignore
-            for game_server in self.__game_server_names:
+            for game_server in self._game_server_names:
                 sub_keyboard = [[f"/status {game_server}"]]
                 reply_keyboard = self.__concatenate_sequences(reply_keyboard, sub_keyboard)  # type: ignore
 
@@ -147,7 +109,7 @@ class TelegramBot(BotInterface):
             )
             return
 
-        game_server = self.__get_game_server(args[0])
+        game_server = self._get_game_server(args[0])
         server_status = game_server.status()
 
         if server_status.status == "online":
@@ -173,7 +135,7 @@ class TelegramBot(BotInterface):
         delta = d1 - d0
         days_left = f"({delta.days} days left)"
 
-        server_name = self.__get_response_title(game_server=game_server)
+        server_name = self._get_response_title(game_server=game_server)
         response_text = f"__*{escape_markdown(server_name, version=2)}*__\n\n"
         response_text += (
             f"*Address:* {escape_markdown(server_status.address, version=2)}\n"
@@ -211,7 +173,7 @@ class TelegramBot(BotInterface):
 
         if len(args) == 0:
             reply_keyboard = [[]]  # type: ignore
-            for game_server in self.__game_server_names:
+            for game_server in self._game_server_names:
                 sub_keyboard = [[f"/start {game_server}"]]
                 reply_keyboard = self.__concatenate_sequences(reply_keyboard, sub_keyboard)  # type: ignore
 
@@ -229,9 +191,9 @@ class TelegramBot(BotInterface):
             )
             return
 
-        game_server = self.__get_game_server(args[0])
+        game_server = self._get_game_server(args[0])
 
-        if username not in self.__configuration.privileged_users:
+        if username not in self._configuration.privileged_users:
             await context.bot.send_message(
                 chat_id,
                 text="Sorry but you don't have rights to call this command\! \u1F925",
@@ -270,7 +232,7 @@ class TelegramBot(BotInterface):
 
         if len(args) == 0:
             reply_keyboard = [[]]  # type: ignore
-            for game_server in self.__game_server_names:
+            for game_server in self._game_server_names:
                 sub_keyboard = [[f"/stop {game_server}"]]
                 reply_keyboard = self.__concatenate_sequences(reply_keyboard, sub_keyboard)  # type: ignore
 
@@ -288,9 +250,9 @@ class TelegramBot(BotInterface):
             )
             return
 
-        game_server = self.__get_game_server(args[0])
+        game_server = self._get_game_server(args[0])
 
-        if username not in self.__configuration.privileged_users:
+        if username not in self._configuration.privileged_users:
             await context.bot.send_message(
                 chat_id,
                 text="Sorry but you don't have rights to call this command\! \u1F925",
@@ -331,7 +293,7 @@ class TelegramBot(BotInterface):
 
         if len(args) == 0:
             reply_keyboard = [[]]  # type: ignore
-            for game_server in self.__game_server_names:
+            for game_server in self._game_server_names:
                 sub_keyboard = [[f"/restart {game_server}"]]
                 reply_keyboard = self.__concatenate_sequences(reply_keyboard, sub_keyboard)  # type: ignore
 
@@ -349,9 +311,9 @@ class TelegramBot(BotInterface):
             )
             return
 
-        game_server = self.__get_game_server(args[0])
+        game_server = self._get_game_server(args[0])
 
-        if username not in self.__configuration.privileged_users:
+        if username not in self._configuration.privileged_users:
             await context.bot.send_message(
                 chat_id,
                 text="Sorry but you don't have rights to call this command\! \u1F925",
@@ -392,7 +354,7 @@ class TelegramBot(BotInterface):
 
         if len(args) == 0:
             reply_keyboard = [[]]  # type: ignore
-            for game_server in self.__game_server_names:
+            for game_server in self._game_server_names:
                 sub_keyboard = [[f"/backup {game_server}"]]
                 reply_keyboard = self.__concatenate_sequences(reply_keyboard, sub_keyboard)  # type: ignore
 
@@ -410,9 +372,9 @@ class TelegramBot(BotInterface):
             )
             return
 
-        game_server = self.__get_game_server(args[0])
+        game_server = self._get_game_server(args[0])
 
-        if username not in self.__configuration.privileged_users:
+        if username not in self._configuration.privileged_users:
             await context.bot.send_message(
                 chat_id,
                 text="Sorry but you don't have rights to call this command\! \u1F925",
@@ -462,11 +424,11 @@ class TelegramBot(BotInterface):
     #             )
 
     def notify(self, title: str, message: str) -> None:
-        with self.__notify_mutex:
-            notify_message: NotifyMessage = NotifyMessage()
+        with self._notify_mutex:
+            notify_message: BotForwardMessage = BotForwardMessage()
             notify_message.title = title
             notify_message.message = message
-            self.__notify_messages.append(notify_message)
+            self._notify_messages.append(notify_message)
 
     def activate(self) -> bool:
         try:
