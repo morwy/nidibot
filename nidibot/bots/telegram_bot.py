@@ -430,7 +430,7 @@ class TelegramBot(BotInterface):
             notify_message.message = message
             self._notify_messages.append(notify_message)
 
-    def activate(self) -> bool:
+    def start(self) -> bool:
         try:
             self.__bot.run_polling(allowed_updates=Update.ALL_TYPES)
             return True

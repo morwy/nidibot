@@ -131,7 +131,7 @@ class Nidibot:
             logging.debug("nidibot was started.")
 
         for bot in self.__bots:
-            bot.activate()
+            bot.start()
 
     @staticmethod
     def initialize_folder() -> None:
