@@ -58,5 +58,5 @@ class BotInterface(ABC):
         pass
 
     @abstractmethod
-    def start(self) -> bool:
+    def start(self) -> None:
         pass

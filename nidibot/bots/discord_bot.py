@@ -311,10 +311,8 @@ class DiscordBot(BotInterface):
             notify_message.message = message
             self._notify_messages.append(notify_message)
 
-    def start(self) -> bool:
+    def start(self) -> None:
         try:
             self.__bot.run()
-            return True
         except Exception as exception:
             logging.exception(exception)
-            return False

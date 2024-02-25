@@ -6,6 +6,7 @@ import os
 import pathlib
 import platform
 import shutil
+import threading
 from dataclasses import dataclass, field
 from logging.handlers import TimedRotatingFileHandler
 from typing import List
@@ -15,6 +16,7 @@ from dacite import from_dict
 
 from nidibot.bots.bot_factory import BotFactory
 from nidibot.bots.bot_interface import BotConfiguration, BotInterface
+from nidibot.bots.telegram_bot import TelegramBot
 from nidibot.server_provider.game_server import GameServer
 from nidibot.server_provider.server_provider_factory import ServerProviderFactory
 from nidibot.server_provider.server_provider_interface import (
@@ -130,8 +132,28 @@ class Nidibot:
         except pkg_resources.DistributionNotFound:
             logging.debug("nidibot was started.")
 
+        #
+        # Run each bot in separate thread.
+        #
+        # WARNING: a lousy solution to run python-telegram-bot in separate thread. To be fixed.
+        #
+        threads: list = []
+        telegram_bot = None
         for bot in self.__bots:
-            bot.start()
+            if isinstance(bot, TelegramBot):
+                telegram_bot = bot
+                continue
+
+            thread = threading.Thread(target=bot.start)
+            thread.start()
+
+            threads.append(thread)
+
+        if telegram_bot is not None:
+            telegram_bot.start()
+
+        for thread in threads:
+            thread.join()
 
     @staticmethod
     def initialize_folder() -> None:

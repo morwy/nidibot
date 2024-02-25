@@ -38,9 +38,6 @@ class TelegramBot(BotInterface):
         self.__bot.add_handler(CommandHandler("backup", self.__backup))
         self.__bot.add_handler(CommandHandler("backup", self.__backup))
 
-        # job_queue = self.__bot.job_queue
-        # job_queue.run_repeating(self.__notify_loop, interval=5, first=0)  # type: ignore
-
     def __concatenate_sequences(
         self, sequence1: Sequence, sequence2: Sequence
     ) -> Sequence:
@@ -405,24 +402,6 @@ class TelegramBot(BotInterface):
                 reply_markup=ReplyKeyboardRemove(),
             )
 
-    # async def __notify_loop(self, context: ContextTypes.DEFAULT_TYPE) -> None:
-    #     local_notify_messages: List[NotifyMessage] = []
-    #     with self.__notify_mutex:
-    #         local_notify_messages = self.__notify_messages
-    #         self.__notify_messages = []
-
-    #     if len(local_notify_messages) == 0:
-    #         return
-
-    #     for notify_message in local_notify_messages:
-    #         for channel in self.__connected_channels:
-    #             await context.bot.send_message(
-    #                 channel,
-    #                 text=f"\u2705 {notify_message.title}\n{notify_message.message}",
-    #                 parse_mode=ParseMode.MARKDOWN_V2,
-    #                 reply_markup=ReplyKeyboardRemove(),
-    #             )
-
     def notify(self, title: str, message: str) -> None:
         with self._notify_mutex:
             notify_message: BotForwardMessage = BotForwardMessage()
@@ -430,10 +409,8 @@ class TelegramBot(BotInterface):
             notify_message.message = message
             self._notify_messages.append(notify_message)
 
-    def start(self) -> bool:
+    def start(self) -> None:
         try:
-            self.__bot.run_polling(allowed_updates=Update.ALL_TYPES)
-            return True
+            self.__bot.run_polling(allowed_updates=Update.ALL_TYPES, close_loop=False)
         except Exception as exception:
             logging.exception(exception)
-            return False
