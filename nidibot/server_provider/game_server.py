@@ -32,7 +32,7 @@ class GameServer:
 
     def status(self) -> ServerStatus:
         """
-        Returns server name.
+        Returns latest server status.
 
         Returns:
             server_status (ServerStatus): server status as a structure
@@ -75,23 +75,23 @@ class GameServer:
         """
         return self.__server_provider.create_backup(self.__server_id)
 
-    def restore_backup(self, timestamp: str) -> bool:
+    def restore_backup(self, filepath: str) -> bool:
         """
         Requests server provider to restore a game server backup.
 
         Parameters:
-            timestamp (str): defines backup by creation timestamp
+            filepath (str): defines filepath to backup
 
         Returns:
             result (bool): operation result
         """
-        return self.__server_provider.restore_backup(self.__server_id, timestamp)
+        return self.__server_provider.restore_backup(self.__server_id, filepath)
 
     def list_backups(self) -> list:
         """
         Requests server provider to provide list of available backups.
 
         Returns:
-            backups (list[str]): list of backups
+            backups (List[BackupDescription]): list of backups
         """
         return self.__server_provider.list_backups(self.__server_id)

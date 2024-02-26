@@ -80,7 +80,7 @@ class ServerProviderInterface(ABC):
         pass
 
     @abstractmethod
-    def restore_backup(self, server_id: str = "", timestamp: str = "") -> bool:
+    def restore_backup(self, server_id: str = "", filepath: str = "") -> bool:
         pass
 
     @abstractmethod

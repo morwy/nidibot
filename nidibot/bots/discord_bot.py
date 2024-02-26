@@ -1,14 +1,21 @@
 #!/usr/bin/env python
 
 import logging
+import typing
 from datetime import date, datetime
 from typing import List
 
 import hikari
 import lightbulb
+from hikari.api import MessageActionRowBuilder
 from lightbulb.ext import tasks
 
-from nidibot.bots.bot_interface import BotConfiguration, BotForwardMessage, BotInterface
+from nidibot.bots.bot_interface import (
+    BackupDescription,
+    BotConfiguration,
+    BotForwardMessage,
+    BotInterface,
+)
 from nidibot.server_provider.game_server import GameServer
 
 
@@ -271,6 +278,142 @@ class DiscordBot(BotInterface):
 
             await ctx.respond(embed=embed)
 
+        async def create_backup_buttons(
+            bot: lightbulb.BotApp, backups: List[BackupDescription]
+        ) -> typing.Iterable[MessageActionRowBuilder]:
+
+            rows: typing.List[MessageActionRowBuilder] = []
+            row = bot.rest.build_message_action_row()
+
+            buttons_added_to_row = 0
+            for backup_description in backups:
+                if buttons_added_to_row % 5 == 0 and buttons_added_to_row != 0:
+                    rows.append(row)
+                    row = bot.rest.build_message_action_row()
+                    buttons_added_to_row = 0
+
+                row.add_interactive_button(
+                    hikari.ButtonStyle.SECONDARY,
+                    backup_description.filepath,
+                    label=backup_description.readable_name,
+                )
+
+                buttons_added_to_row += 1
+
+            rows.append(row)
+
+            return rows
+
+        async def handle_backup_restore(
+            ctx,
+            message: hikari.Message,
+            title: str,
+            backups: List[BackupDescription],
+            game_server: GameServer,
+        ) -> None:
+
+            with ctx.bot.stream(hikari.InteractionCreateEvent, 120).filter(
+                lambda e: (
+                    isinstance(e.interaction, hikari.ComponentInteraction)
+                    and e.interaction.user == ctx.author
+                    and e.interaction.message == message
+                )
+            ) as stream:
+                async for event in stream:
+                    interaction: hikari.ComponentInteraction = event.interaction  # type: ignore
+                    filename = interaction.custom_id
+                    backup_description = next(
+                        (x for x in backups if x.filepath == filename), None
+                    )
+                    if backup_description is None:
+                        return
+
+                    embed = hikari.Embed(
+                        title=title,
+                        color=hikari.colors.Color(self.__color_orange),
+                        description=f"Selected backup: {backup_description.readable_name}",
+                    )
+
+                    try:
+                        await interaction.create_initial_response(
+                            hikari.ResponseType.MESSAGE_UPDATE,
+                            embed=embed,
+                            components=[],
+                        )
+                    except hikari.NotFoundError:
+                        await interaction.edit_initial_response(
+                            embed=embed, components=[]
+                        )
+
+                    embed = hikari.Embed(
+                        title=title,
+                        description=f":warning: Started restoring backup from {backup_description.readable_name}, please wait.",
+                        color=hikari.colors.Color(self.__color_orange),
+                    )
+                    await ctx.respond(embed=embed)
+
+                    if game_server.restore_backup(backup_description.filepath):
+                        embed = hikari.Embed(
+                            title=title,
+                            description=f":white_check_mark: Backup from {backup_description.readable_name} was restored successfully!",
+                            color=hikari.colors.Color(self.__color_green),
+                        )
+                    else:
+                        embed = hikari.Embed(
+                            title=title,
+                            description=f":no_entry: Restoring backup from {backup_description.readable_name} failed, please check bot logs!",
+                            color=hikari.colors.Color(self.__color_red),
+                        )
+
+                    await ctx.respond(embed=embed)
+
+        @self.__bot.command
+        @lightbulb.option(
+            name="name",
+            description="States server to which command will be applied",
+            choices=self._game_server_names,
+            required=False,
+        )
+        @lightbulb.command(
+            name="backup_restore",
+            description="Restores specific backup on a game server.",
+        )
+        @lightbulb.implements(lightbulb.SlashCommand)
+        async def backup_restore(ctx) -> None:
+            logging.debug("Called 'backup_restore' by '%s'.", ctx.author)
+
+            game_server = self._get_game_server(ctx.options.name)
+            title = self._get_response_title(game_server)
+
+            user = str(ctx.author)
+            if user not in self._configuration.privileged_users:
+                embed = hikari.Embed(
+                    title=title,
+                    description="Sorry but you don't have rights to call this command! :liar:",
+                    color=hikari.colors.Color(self.__color_red),
+                )
+
+                await ctx.respond(embed=embed)
+                return
+
+            backups = game_server.list_backups()
+            self._backups[ctx.options.name] = backups
+
+            embed = hikari.Embed(
+                title=title,
+                description="Select a backup:",
+                color=hikari.colors.Color(self.__color_orange),
+            )
+
+            backup_buttons = await create_backup_buttons(ctx.bot, backups)
+            response = await ctx.respond(
+                embed=embed,
+                components=backup_buttons,
+            )
+
+            message = await response.message()
+            await handle_backup_restore(ctx, message, title, backups, game_server)
+
         @self.__bot.command
         @lightbulb.option(
             name="name",
@@ -289,10 +432,10 @@ class DiscordBot(BotInterface):
             game_server = self._get_game_server(ctx.options.name)
             title = self._get_response_title(game_server)
 
-            self._backup_timestamps[ctx.options.name] = game_server.list_backups()
+            self._backups[ctx.options.name] = game_server.list_backups()
 
             backup_sum_message = "**Available backups:**\n"
-            for backup_timestamp in self._backup_timestamps[ctx.options.name]:
+            for backup_timestamp in self._backups[ctx.options.name]:
                 backup_sum_message += f"* {backup_timestamp}\n"
 
             embed = hikari.Embed(

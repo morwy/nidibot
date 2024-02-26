@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from multiprocessing import Lock
-from typing import List
+from typing import Dict, List
 
 from nidibot.server_provider.game_server import GameServer
 
@@ -12,6 +12,15 @@ from nidibot.server_provider.game_server import GameServer
 class BotForwardMessage:
     title: str = ""
     message: str = ""
+
+
+@dataclass
+class BackupDescription:
+    readable_name: str = ""
+    filepath: str = ""
+
+    def __lt__(self, other):
+        return self.readable_name < other.readable_name
 
 
 @dataclass
@@ -26,11 +35,11 @@ class BotInterface(ABC):
         self._configuration = configuration
         self._game_servers = game_servers
 
+        self._backups: Dict[str, List[BackupDescription]] = {}
         self._game_server_names: list = []
         for game_server in self._game_servers:
             self._game_server_names.append(game_server.name())
-
-        self._backup_timestamps: dict = {}
+            self._backups[game_server.name()] = game_server.list_backups()
 
         self._notify_mutex = Lock()
         self._notify_messages: List[BotForwardMessage] = []

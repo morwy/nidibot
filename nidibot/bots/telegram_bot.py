@@ -7,7 +7,14 @@ from typing import List, Sequence
 
 from telegram import BotCommand, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram.constants import ParseMode
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    ContextTypes,
+    ConversationHandler,
+    MessageHandler,
+    filters,
+)
 from telegram.helpers import escape_markdown
 
 from nidibot.bots.bot_interface import BotConfiguration, BotForwardMessage, BotInterface
@@ -38,6 +45,35 @@ class TelegramBot(BotInterface):
         self.__bot.add_handler(CommandHandler("backup_create", self.__backup_create))
         self.__bot.add_handler(CommandHandler("backup_list", self.__backup_list))
 
+        (
+            self.__BACKUP_RESTORE_SERVER,
+            self.__BACKUP_RESTORE_FILEPATH,
+            self.__BACKUP_RESTORE_CANCEL,
+        ) = range(3)
+
+        conversation_handler = ConversationHandler(
+            entry_points=[CommandHandler("backup_restore", self.__backup_restore)],
+            states={
+                self.__BACKUP_RESTORE_SERVER: [
+                    MessageHandler(
+                        filters=None,
+                        callback=self.__backup_restore_filepath,
+                    )
+                ],
+                self.__BACKUP_RESTORE_FILEPATH: [
+                    MessageHandler(
+                        filters=None,
+                        callback=self.__backup_restore_start,
+                    )
+                ],
+                self.__BACKUP_RESTORE_CANCEL: [
+                    CommandHandler("cancel", self.__backup_restore_cancel)
+                ],
+            },
+            fallbacks=[CommandHandler("cancel", self.__backup_restore_cancel)],
+        )
+        self.__bot.add_handler(conversation_handler)
+
     def __concatenate_sequences(
         self, sequence1: Sequence, sequence2: Sequence
     ) -> Sequence:
@@ -61,6 +97,10 @@ class TelegramBot(BotInterface):
             BotCommand(
                 "backup_create",
                 "Creates backup of games server files and uploads them to storage.",
+            ),
+            BotCommand(
+                "backup_restore",
+                "Restores specific backup on a game server.",
             ),
             BotCommand(
                 "backup_list",
@@ -406,6 +446,144 @@ class TelegramBot(BotInterface):
                 reply_markup=ReplyKeyboardRemove(),
             )
 
+    async def __backup_restore(
+        self, update: Update, _: ContextTypes.DEFAULT_TYPE
+    ) -> int:
+        if update.effective_user is None or update.effective_user.username is None:
+            logging.critical("No username in incoming message!")
+            return self.__BACKUP_RESTORE_CANCEL
+
+        username = update.effective_user.username
+
+        if update.message is None or update.message.text is None:
+            logging.critical("No chat_id in incoming message!")
+            return self.__BACKUP_RESTORE_CANCEL
+
+        logging.debug("Called 'backup_restore' by '%s'.", username)
+
+        reply_keyboard = [[]]  # type: ignore
+        for game_server in self._game_server_names:
+            sub_keyboard = [[game_server]]
+            reply_keyboard = self.__concatenate_sequences(reply_keyboard, sub_keyboard)  # type: ignore
+
+        await update.message.reply_text(
+            "Please select server:",
+            reply_markup=ReplyKeyboardMarkup(
+                reply_keyboard,
+                one_time_keyboard=True,
+            ),
+        )
+
+        return self.__BACKUP_RESTORE_SERVER
+
+    async def __backup_restore_filepath(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> int:
+        if update.message is None or update.message.from_user is None:
+            logging.critical("No username in incoming message!")
+            return self.__BACKUP_RESTORE_CANCEL
+
+        username = update.message.from_user.username
+
+        if update.message is None or update.message.text is None:
+            logging.critical("No text in incoming message!")
+            return self.__BACKUP_RESTORE_CANCEL
+
+        server_name = update.message.text
+
+        if context.user_data is not None:
+            context.user_data["game_server"] = server_name
+
+        logging.debug("'%s' selected server '%s'.", username, server_name)
+
+        game_server = next(
+            (x for x in self._game_servers if x.name() == server_name), None
+        )
+        if game_server is None:
+            return self.__BACKUP_RESTORE_CANCEL
+
+        reply_keyboard = [[]]  # type: ignore
+        for backup_description in game_server.list_backups():
+            sub_keyboard = [[backup_description.readable_name]]
+            reply_keyboard = self.__concatenate_sequences(reply_keyboard, sub_keyboard)  # type: ignore
+
+        await update.message.reply_text(
+            "Please select backup:",
+            reply_markup=ReplyKeyboardMarkup(
+                reply_keyboard,
+                one_time_keyboard=True,
+            ),
+        )
+
+        return self.__BACKUP_RESTORE_FILEPATH
+
+    async def __backup_restore_start(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> int:
+        if update.message is None or update.message.from_user is None:
+            logging.critical("No username in incoming message!")
+            return self.__BACKUP_RESTORE_CANCEL
+
+        username = update.message.from_user.username
+
+        if update.message is None or update.message.text is None:
+            logging.critical("No text in incoming message!")
+            return self.__BACKUP_RESTORE_CANCEL
+
+        backup_readable_name = update.message.text
+
+        logging.debug("'%s' selected backup '%s'.", username, backup_readable_name)
+
+        if context.user_data is None:
+            return self.__BACKUP_RESTORE_CANCEL
+
+        server_name = context.user_data["game_server"]
+        game_server = next(
+            (x for x in self._game_servers if x.name() == server_name),
+            None,
+        )
+        if game_server is None:
+            return self.__BACKUP_RESTORE_CANCEL
+
+        backups = self._backups[server_name]
+        if backups is None:
+            return self.__BACKUP_RESTORE_CANCEL
+
+        backup_description = next(
+            (x for x in backups if x.readable_name == backup_readable_name), None
+        )
+        if backup_description is None:
+            return self.__BACKUP_RESTORE_CANCEL
+
+        escaped_backup_name = escape_markdown(
+            backup_description.readable_name, version=2
+        )
+        await update.message.reply_text(
+            text=f"\u26A0 Started restoring backup from {escaped_backup_name}\, please wait\. \u26A0",
+            parse_mode=ParseMode.MARKDOWN_V2,
+            reply_markup=ReplyKeyboardRemove(),
+        )
+
+        if game_server.restore_backup(backup_description.filepath):
+            await update.message.reply_text(
+                text=f"\u2705 Backup from {escaped_backup_name} was restored successfully\!",
+                parse_mode=ParseMode.MARKDOWN_V2,
+                reply_markup=ReplyKeyboardRemove(),
+            )
+        else:
+            await update.message.reply_text(
+                text=f"\u26D4 Restoring backup from {escaped_backup_name} failed\, please check bot logs\!",
+                parse_mode=ParseMode.MARKDOWN_V2,
+                reply_markup=ReplyKeyboardRemove(),
+            )
+
+        return ConversationHandler.END
+
+    async def __backup_restore_cancel(
+        self, _1: Update, _2: ContextTypes.DEFAULT_TYPE
+    ) -> int:
+        return ConversationHandler.END
+
     async def __backup_list(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
     ) -> None:
@@ -449,11 +627,13 @@ class TelegramBot(BotInterface):
 
         game_server = self._get_game_server(args[0])
 
-        self._backup_timestamps[args[0]] = game_server.list_backups()
+        self._backups[args[0]] = game_server.list_backups()
 
         backup_sum_message = "Available backups:\n"
-        for backup in self._backup_timestamps[args[0]]:
-            backup_sum_message += f"\- {escape_markdown(backup, version=2)}\n"
+        for backup in self._backups[args[0]]:
+            backup_sum_message += (
+                f"\- {escape_markdown(backup.readable_name, version=2)}\n"
+            )
 
         await context.bot.send_message(
             chat_id,

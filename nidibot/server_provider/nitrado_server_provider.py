@@ -16,6 +16,7 @@ from typing import Dict, List
 import ftputil  # type: ignore
 import requests  # type: ignore
 
+from nidibot.bots.bot_interface import BackupDescription
 from nidibot.server_provider.game_server import GameServer
 from nidibot.server_provider.server_provider_interface import (
     ServerProviderConfiguration,
@@ -391,14 +392,14 @@ class NitradoServerProvider(ServerProviderInterface):
 
         return True
 
-    def restore_backup(self, server_id: str = "", timestamp: str = "") -> bool:
+    def restore_backup(self, server_id: str = "", filepath: str = "") -> bool:
         return False
 
     def list_backups(self, server_id: str = "") -> list:
         wildcard_path = os.path.join(self.__backup_directory, "*" + server_id + "*")
         file_list = glob.glob(wildcard_path)
 
-        timestamp_list: list = []
+        backups: List[BackupDescription] = []
         for filepath in file_list:
             pathlib_filepath = pathlib.Path(filepath)
             extension = pathlib_filepath.suffix
@@ -413,11 +414,15 @@ class NitradoServerProvider(ServerProviderInterface):
             date_val = datetime.strptime(date_str, "%Y%m%d")
             time_val = datetime.strptime(time_str, "%H%M%S")
 
-            timestamp_list.append(
+            backup_description: BackupDescription = BackupDescription()
+            backup_description.filepath = filepath
+            backup_description.readable_name = (
                 f"{date_val.strftime('%Y-%m-%d')} {time_val.strftime('%H:%M:%S')}"
             )
 
-        timestamp_list.sort()
-        timestamp_list.reverse()
+            backups.append(backup_description)
 
-        return timestamp_list
+        backups.sort()
+        backups.reverse()
+
+        return backups
