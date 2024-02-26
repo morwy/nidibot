@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
@@ -38,18 +39,30 @@ class ServerStatus:
 
 
 class ServerProviderInterface(ABC):
-    @abstractmethod
     def __init__(
         self,
         configuration: ServerProviderConfiguration,
         backup_directory: str,
         notify_callback,
     ):
-        pass
+        if not configuration.token:
+            raise ValueError("API token value is required for nidibot start!")
+
+        if not backup_directory:
+            raise ValueError("Backup directory value is required for nidibot start!")
+
+        self._configuration = configuration
+        self._root_backup_directory = backup_directory
+        self._notify_callback = notify_callback
 
     @abstractmethod
     def _poll(self) -> None:
         pass
+
+    def _get_backup_directory_path(self, game_name: str, server_id: str) -> str:
+        return os.path.join(
+            self._root_backup_directory, self.name().lower(), game_name, server_id
+        )
 
     @abstractmethod
     def get_servers(self) -> list:

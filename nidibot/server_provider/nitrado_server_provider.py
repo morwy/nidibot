@@ -55,16 +55,11 @@ class NitradoServerProvider(ServerProviderInterface):
         backup_directory: str,
         notify_callback,
     ):
-        if not configuration.token:
-            raise ValueError("API token value is required for nidibot start!")
-
-        if not backup_directory:
-            raise ValueError("Backup directory value is required for nidibot start!")
-
-        self.__configuration = configuration
-        self.__backup_directory = backup_directory
-        self.__notify_callback = notify_callback
-
+        super().__init__(
+            configuration=configuration,
+            backup_directory=backup_directory,
+            notify_callback=notify_callback,
+        )
         self.__servers: Dict[str, NitradoServerInformation] = {}
 
         logging.basicConfig(
@@ -112,10 +107,10 @@ class NitradoServerProvider(ServerProviderInterface):
         service_list = []
 
         try:
-            headers = {"Authorization": self.__configuration.token}
+            headers = {"Authorization": self._configuration.token}
             response = requests.get(
                 "https://api.nitrado.net/services",
-                timeout=self.__configuration.timeout_seconds,
+                timeout=self._configuration.timeout_seconds,
                 headers=headers,
             )
 
@@ -150,10 +145,10 @@ class NitradoServerProvider(ServerProviderInterface):
             services = self.__get_services()
             for service in services:
                 try:
-                    headers = {"Authorization": self.__configuration.token}
+                    headers = {"Authorization": self._configuration.token}
                     response = requests.get(
                         f"https://api.nitrado.net/services/{service.id}/gameservers",
-                        timeout=self.__configuration.timeout_seconds,
+                        timeout=self._configuration.timeout_seconds,
                         headers=headers,
                     )
 
@@ -226,52 +221,52 @@ class NitradoServerProvider(ServerProviderInterface):
                     title += f" - {server.status.address}"
 
                     if (
-                        self.__configuration.notifications.on_new_server
+                        self._configuration.notifications.on_new_server
                         and server_id not in self.__servers
                     ):
-                        self.__notify_callback(
+                        self._notify_callback(
                             title, "New game server appeared, please configure it."
                         )
 
                     if (
-                        self.__configuration.notifications.on_status_change
+                        self._configuration.notifications.on_status_change
                         and server.status.status
                         != self.__servers[server_id].status.status
                     ):
-                        self.__notify_callback(
+                        self._notify_callback(
                             title,
                             f"Status changed from '{self.__servers[server_id].status.status}' to "
                             f"'{server.status.status}'.",
                         )
 
                     if (
-                        self.__configuration.notifications.on_address_change
+                        self._configuration.notifications.on_address_change
                         and server.status.address
                         != self.__servers[server_id].status.address
                     ):
-                        self.__notify_callback(
+                        self._notify_callback(
                             title,
                             f"Address from '{self.__servers[server_id].status.address}' to "
                             f"'{server.status.address}'.",
                         )
 
                     if (
-                        self.__configuration.notifications.on_version_change
+                        self._configuration.notifications.on_version_change
                         and server.status.version
                         != self.__servers[server_id].status.version
                     ):
-                        self.__notify_callback(
+                        self._notify_callback(
                             title,
                             f"Version from '{self.__servers[server_id].status.version}' to "
                             f"'{server.status.version}'.",
                         )
 
                     if (
-                        self.__configuration.notifications.on_update_available_change
+                        self._configuration.notifications.on_update_available_change
                         and server.status.update_available
                         != self.__servers[server_id].status.update_available
                     ):
-                        self.__notify_callback(
+                        self._notify_callback(
                             title,
                             "Update is available, please restart server.",
                         )
@@ -279,7 +274,7 @@ class NitradoServerProvider(ServerProviderInterface):
             self.__servers = servers
 
             self.__data_received_event.set()
-            self.__stopping_event.wait(self.__configuration.polling_seconds)
+            self.__stopping_event.wait(self._configuration.polling_seconds)
 
     def name(self) -> str:
         return "Nitrado"
@@ -303,10 +298,10 @@ class NitradoServerProvider(ServerProviderInterface):
 
     def stop(self, server_id: str = "") -> bool:
         try:
-            headers = {"Authorization": self.__configuration.token}
+            headers = {"Authorization": self._configuration.token}
             response = requests.post(
                 f"https://api.nitrado.net/services/{server_id}/gameservers/stop",
-                timeout=self.__configuration.timeout_seconds,
+                timeout=self._configuration.timeout_seconds,
                 headers=headers,
             )
 
@@ -326,10 +321,10 @@ class NitradoServerProvider(ServerProviderInterface):
 
     def restart(self, server_id: str = "") -> bool:
         try:
-            headers = {"Authorization": self.__configuration.token}
+            headers = {"Authorization": self._configuration.token}
             response = requests.post(
                 f"https://api.nitrado.net/services/{server_id}/gameservers/restart",
-                timeout=self.__configuration.timeout_seconds,
+                timeout=self._configuration.timeout_seconds,
                 headers=headers,
             )
 
@@ -353,11 +348,8 @@ class NitradoServerProvider(ServerProviderInterface):
             with tempfile.TemporaryDirectory() as temp_folder_path:
                 datetime_now = datetime.now()
                 datetime_str = datetime_now.strftime("%Y%m%d_%H%M%S")
-                backup_filename = (
-                    f"{self.name().lower()}_{self.__servers[server_id].short_name}_"
-                    f"id-{server_id}_{datetime_str}"
-                )
-                local_path = os.path.join(temp_folder_path, backup_filename)
+
+                local_path = os.path.join(temp_folder_path, datetime_str)
                 pathlib.Path(local_path).mkdir(parents=True, exist_ok=True)
 
                 with ftputil.FTPHost(
@@ -372,15 +364,20 @@ class NitradoServerProvider(ServerProviderInterface):
                         ignore_folders=["Crashes", "CrashReportClient"],
                     )
 
+                backup_directory = self._get_backup_directory_path(
+                    game_name=self.__servers[server_id].short_name, server_id=server_id
+                )
+                pathlib.Path(backup_directory).mkdir(parents=True, exist_ok=True)
+
                 shutil.make_archive(
-                    os.path.join(self.__backup_directory, backup_filename),
+                    os.path.join(backup_directory, datetime_str),
                     "zip",
                     local_path,
                 )
 
                 logging.debug(
                     "Created backup archive at path: '%s'.",
-                    os.path.join(self.__backup_directory, backup_filename),
+                    os.path.join(backup_directory, datetime_str),
                 )
 
             end_time = time.time()
@@ -396,7 +393,11 @@ class NitradoServerProvider(ServerProviderInterface):
         return False
 
     def list_backups(self, server_id: str = "") -> list:
-        wildcard_path = os.path.join(self.__backup_directory, "*" + server_id + "*")
+        backup_directory = self._get_backup_directory_path(
+            game_name=self.__servers[server_id].short_name, server_id=server_id
+        )
+
+        wildcard_path = os.path.join(backup_directory, "*")
         file_list = glob.glob(wildcard_path)
 
         backups: List[BackupDescription] = []
