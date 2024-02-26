@@ -13,8 +13,8 @@ nidibot is a simple to install and configure bot for controlling your game serve
 * A minimalistic set of fundamental commands - everything you need to run and manage your game server.
 * Possibility of connecting unlimited (somewhat) amount of game server providers and bots.
 * High extensibility for game server providers and bots - just add a new class for missing game server provider or bot and make a PR.
-* Easy setup - install ready-made nidibot package from PyPI and call `initalize_folder()`.
-* Simple configuration - everything is located in `bot_configufation.json` file in bot folder.
+* Easy setup - install ready-made nidibot package from PyPI and call `initialize_folder()`.
+* Simple configuration - everything is located in `bot_configuration.json` file in bot folder.
 
 ### Limitations
 
