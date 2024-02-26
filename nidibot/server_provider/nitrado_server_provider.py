@@ -6,6 +6,7 @@ import logging
 import os
 import pathlib
 import shutil
+import subprocess
 import tempfile
 import threading
 import time
@@ -41,11 +42,21 @@ class NitradoFtpConfiguration:
 
 
 @dataclass
+class NitradoMysqlConfiguration:
+    hostname: str = ""
+    port: int = 21
+    username: str = ""
+    password: str = ""
+    database: str = ""
+
+
+@dataclass
 class NitradoServerInformation:
     id: str = ""
     short_name: str = ""
     status: ServerStatus = field(default_factory=ServerStatus)
     ftp: NitradoFtpConfiguration = field(default_factory=NitradoFtpConfiguration)
+    mysql: NitradoMysqlConfiguration = field(default_factory=NitradoMysqlConfiguration)
 
 
 class NitradoServerProvider(ServerProviderInterface):
@@ -68,6 +79,8 @@ class NitradoServerProvider(ServerProviderInterface):
             handlers=[logging.StreamHandler()],
         )
 
+        self.__verify_api_version()
+
         self.__data_received_event = threading.Event()
         self.__stopping_event = threading.Event()
 
@@ -76,6 +89,34 @@ class NitradoServerProvider(ServerProviderInterface):
         self.__polling_thread.start()
 
         self.__data_received_event.wait()
+
+    def __verify_api_version(self) -> None:
+        response = requests.get(
+            "https://api.nitrado.net/version",
+            timeout=self._configuration.timeout_seconds,
+        )
+
+        logging.debug(
+            "Response received, status code: %d, content: %s.",
+            response.status_code,
+            response.content.decode("utf-8"),
+        )
+
+        content_json = json.loads(response.content.decode("utf-8"))
+
+        if response.status_code != 200:
+            raise ValueError("Failed reading Nitrado API version!")
+
+        if content_json["status"] != "success":
+            raise ValueError("Failed reading Nitrado API version!")
+
+        # Warning: Nitrado always changes last part of provided API version.
+        expected_api_version = "nitrapi-1471"
+        if expected_api_version not in content_json["message"]:
+            raise ValueError(
+                f"Nitrado API version was changed! Expected: {expected_api_version}, actual: "
+                f"{content_json['message']}."
+            )
 
     def __download_ftp_folder(
         self, ftp_server, local_path: str, remote_path: str, ignore_folders: list
@@ -203,6 +244,16 @@ class NitradoServerProvider(ServerProviderInterface):
                     server.ftp.port = int(ftp_dict["port"])
                     server.ftp.username = ftp_dict["username"]
                     server.ftp.password = ftp_dict["password"]
+
+                    mysql_dict = content_json["data"]["gameserver"]["credentials"][
+                        "mysql"
+                    ]
+
+                    server.mysql.hostname = mysql_dict["hostname"]
+                    server.mysql.port = int(mysql_dict["port"])
+                    server.mysql.username = mysql_dict["username"]
+                    server.mysql.password = mysql_dict["password"]
+                    server.mysql.database = mysql_dict["database"]
 
                     servers[server.id] = server
 
@@ -352,6 +403,10 @@ class NitradoServerProvider(ServerProviderInterface):
                 local_path = os.path.join(temp_folder_path, datetime_str)
                 pathlib.Path(local_path).mkdir(parents=True, exist_ok=True)
 
+                #
+                # Copy game server files via FTP to temporary folder.
+                #
+                files_path = os.path.join(local_path, "files")
                 with ftputil.FTPHost(
                     self.__servers[server_id].ftp.hostname,
                     self.__servers[server_id].ftp.username,
@@ -359,20 +414,63 @@ class NitradoServerProvider(ServerProviderInterface):
                 ) as ftp:
                     self.__download_ftp_folder(
                         ftp_server=ftp,
-                        local_path=local_path,
+                        local_path=files_path,
                         remote_path=".",
                         ignore_folders=["Crashes", "CrashReportClient"],
                     )
 
+                #
+                # Save MySQL database to temporary folder.
+                #
+                mysqldump_path = shutil.which("mysqldump")
+                if mysqldump_path is not None:
+                    database_name = self.__servers[server_id].mysql.database
+                    mysql_folder_path = os.path.join(local_path, "mysql")
+                    pathlib.Path(mysql_folder_path).mkdir(parents=True, exist_ok=True)
+                    database_filepath = os.path.join(
+                        mysql_folder_path, database_name + ".sql"
+                    )
+                    mysqldump_command = [
+                        mysqldump_path,
+                        "--host",
+                        self.__servers[server_id].mysql.hostname,
+                        "--port",
+                        str(self.__servers[server_id].mysql.port),
+                        "--user",
+                        self.__servers[server_id].mysql.username,
+                        f"-p{self.__servers[server_id].mysql.password}",
+                        database_name,
+                        f"--result-file={database_filepath}",
+                    ]
+
+                    process = subprocess.Popen(
+                        mysqldump_command,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        encoding="utf-8",
+                        universal_newlines=True,
+                        cwd=local_path,
+                    )
+                    for stdout_line in iter(process.stdout.readline, ""):  # type: ignore
+                        logging.info(stdout_line.replace("\n", ""))
+                    process.stdout.close()  # type: ignore
+                    _ = process.wait()
+
+                else:
+                    logging.warning(
+                        "No mysqldump is available in the system, please install it."
+                    )
+
+                #
+                # Create ZIP archive.
+                #
                 backup_directory = self._get_backup_directory_path(
                     game_name=self.__servers[server_id].short_name, server_id=server_id
                 )
                 pathlib.Path(backup_directory).mkdir(parents=True, exist_ok=True)
 
                 shutil.make_archive(
-                    os.path.join(backup_directory, datetime_str),
-                    "zip",
-                    local_path,
+                    os.path.join(backup_directory, datetime_str), "zip", local_path
                 )
 
                 logging.debug(
