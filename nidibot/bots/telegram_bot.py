@@ -13,7 +13,6 @@ from telegram.ext import (
     ContextTypes,
     ConversationHandler,
     MessageHandler,
-    filters,
 )
 from telegram.helpers import escape_markdown
 
@@ -26,10 +25,7 @@ class TelegramBot(BotInterface):
         super().__init__(configuration=configuration, game_servers=game_servers)
 
         logging.getLogger("httpx").setLevel(logging.WARNING)
-        logging.getLogger("telegram").setLevel(logging.WARNING)
-        logging.getLogger("telegram.constants").setLevel(logging.WARNING)
-        logging.getLogger("telegram.ext").setLevel(logging.WARNING)
-        logging.getLogger("telegram.helpers").setLevel(logging.WARNING)
+        logging.getLogger("httpcore").setLevel(logging.WARNING)
 
         self.__bot = (
             Application.builder()
