@@ -435,8 +435,8 @@ class DiscordBot(BotInterface):
             self._backups[ctx.options.name] = game_server.list_backups()
 
             backup_sum_message = "**Available backups:**\n"
-            for backup_timestamp in self._backups[ctx.options.name]:
-                backup_sum_message += f"* {backup_timestamp}\n"
+            for backup in self._backups[ctx.options.name]:
+                backup_sum_message += f"* {backup.readable_name}\n"
 
             embed = hikari.Embed(
                 title=title,
