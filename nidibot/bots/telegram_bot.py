@@ -26,6 +26,7 @@ class TelegramBot(BotInterface):
 
         logging.getLogger("httpx").setLevel(logging.WARNING)
         logging.getLogger("httpcore").setLevel(logging.WARNING)
+        logging.getLogger("telegram").setLevel(logging.WARNING)
 
         self.__bot = (
             Application.builder()
