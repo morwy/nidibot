@@ -10,12 +10,8 @@ import lightbulb
 from hikari.api import MessageActionRowBuilder
 from lightbulb.ext import tasks
 
-from nidibot.bots.bot_interface import (
-    BackupDescription,
-    BotConfiguration,
-    BotForwardMessage,
-    BotInterface,
-)
+from nidibot.bots.bot_interface import (BackupDescription, BotConfiguration,
+                                        BotForwardMessage, BotInterface)
 from nidibot.server_provider.game_server import GameServer
 
 
@@ -166,7 +162,7 @@ class DiscordBot(BotInterface):
 
             embed = hikari.Embed(
                 title=title,
-                description=":warning: Starting server! :warning:",
+                description=":warning: Starting server!",
                 color=hikari.colors.Color(self.__color_red),
             )
             await ctx.respond(embed=embed)
@@ -215,7 +211,7 @@ class DiscordBot(BotInterface):
 
             embed = hikari.Embed(
                 title=title,
-                description=":warning: Stopping server! :warning:",
+                description=":warning: Stopping server!",
                 color=hikari.colors.Color(self.__color_red),
             )
             await ctx.respond(embed=embed)
@@ -264,7 +260,7 @@ class DiscordBot(BotInterface):
 
             embed = hikari.Embed(
                 title=title,
-                description=":warning: Restarting server! :warning:",
+                description=":warning: Restarting server!",
                 color=hikari.colors.Color(self.__color_red),
             )
             await ctx.respond(embed=embed)
