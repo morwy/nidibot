@@ -125,6 +125,17 @@ class TelegramBot(BotInterface):
 
         chat_id = update.effective_message.chat_id
 
+        if (
+            len(self._configuration.allowed_channels) > 0
+            and str(chat_id) not in self._configuration.allowed_channels
+        ):
+            logging.error(
+                "Called 'status' by '%s' in not allowed channel '%s'.",
+                username,
+                chat_id,
+            )
+            return
+
         logging.debug("Called 'status' by '%s'.", username)
 
         if len(args) == 0:
@@ -207,6 +218,17 @@ class TelegramBot(BotInterface):
 
         chat_id = update.effective_message.chat_id
 
+        if (
+            len(self._configuration.allowed_channels) > 0
+            and str(chat_id) not in self._configuration.allowed_channels
+        ):
+            logging.error(
+                "Called 'start' by '%s' in not allowed channel '%s'.",
+                username,
+                chat_id,
+            )
+            return
+
         logging.debug("Called 'start' by '%s'.", username)
 
         if len(args) == 0:
@@ -265,6 +287,17 @@ class TelegramBot(BotInterface):
             return
 
         chat_id = update.effective_message.chat_id
+
+        if (
+            len(self._configuration.allowed_channels) > 0
+            and str(chat_id) not in self._configuration.allowed_channels
+        ):
+            logging.error(
+                "Called 'stop' by '%s' in not allowed channel '%s'.",
+                username,
+                chat_id,
+            )
+            return
 
         logging.debug("Called 'stop' by '%s'.", username)
 
@@ -327,6 +360,16 @@ class TelegramBot(BotInterface):
 
         chat_id = update.effective_message.chat_id
 
+        if (
+            len(self._configuration.allowed_channels) > 0
+            and str(chat_id) not in self._configuration.allowed_channels
+        ):
+            logging.error(
+                "Called 'restart' by '%s' in not allowed channel '%s'.",
+                username,
+                chat_id,
+            )
+            return
         logging.debug("Called 'restart' by '%s'.", username)
 
         if len(args) == 0:
@@ -387,6 +430,17 @@ class TelegramBot(BotInterface):
             return
 
         chat_id = update.effective_message.chat_id
+
+        if (
+            len(self._configuration.allowed_channels) > 0
+            and str(chat_id) not in self._configuration.allowed_channels
+        ):
+            logging.error(
+                "Called 'backup_create' by '%s' in not allowed channel '%s'.",
+                username,
+                chat_id,
+            )
+            return
 
         logging.debug("Called 'backup_create' by '%s'.", username)
 
@@ -454,6 +508,23 @@ class TelegramBot(BotInterface):
 
         if update.message is None or update.message.text is None:
             logging.critical("No chat_id in incoming message!")
+            return self.__BACKUP_RESTORE_CANCEL
+
+        if update.effective_message is None or update.effective_message.chat_id is None:
+            logging.critical("No chat_id in incoming message!")
+            return self.__BACKUP_RESTORE_CANCEL
+
+        chat_id = update.effective_message.chat_id
+
+        if (
+            len(self._configuration.allowed_channels) > 0
+            and str(chat_id) not in self._configuration.allowed_channels
+        ):
+            logging.error(
+                "Called 'backup_restore' by '%s' in not allowed channel '%s'.",
+                username,
+                chat_id,
+            )
             return self.__BACKUP_RESTORE_CANCEL
 
         logging.debug("Called 'backup_restore' by '%s'.", username)
@@ -599,6 +670,17 @@ class TelegramBot(BotInterface):
             return
 
         chat_id = update.effective_message.chat_id
+
+        if (
+            len(self._configuration.allowed_channels) > 0
+            and str(chat_id) not in self._configuration.allowed_channels
+        ):
+            logging.error(
+                "Called 'backup_list' by '%s' in not allowed channel '%s'.",
+                username,
+                chat_id,
+            )
+            return
 
         logging.debug("Called 'backup_list' by '%s'.", username)
 

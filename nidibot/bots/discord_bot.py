@@ -47,6 +47,17 @@ class DiscordBot(BotInterface):
         )
         @lightbulb.implements(lightbulb.SlashCommand)
         async def status(ctx) -> None:
+            if (
+                len(self._configuration.allowed_channels) > 0
+                and str(ctx.channel_id) not in self._configuration.allowed_channels
+            ):
+                logging.error(
+                    "Called 'status' by '%s' in not allowed channel '%s'.",
+                    ctx.author,
+                    ctx.channel_id,
+                )
+                return
+
             logging.debug("Called 'status' by '%s'.", ctx.author)
 
             game_server = self._get_game_server(ctx.options.name)
@@ -126,6 +137,17 @@ class DiscordBot(BotInterface):
         )
         @lightbulb.implements(lightbulb.SlashCommand)
         async def start(ctx) -> None:
+            if (
+                len(self._configuration.allowed_channels) > 0
+                and str(ctx.channel_id) not in self._configuration.allowed_channels
+            ):
+                logging.error(
+                    "Called 'start' by '%s' in not allowed channel '%s'.",
+                    ctx.author,
+                    ctx.channel_id,
+                )
+                return
+
             logging.debug("Called 'start' by '%s'.", ctx.author)
 
             game_server = self._get_game_server(ctx.options.name)
@@ -164,6 +186,17 @@ class DiscordBot(BotInterface):
         )
         @lightbulb.implements(lightbulb.SlashCommand)
         async def stop(ctx) -> None:
+            if (
+                len(self._configuration.allowed_channels) > 0
+                and str(ctx.channel_id) not in self._configuration.allowed_channels
+            ):
+                logging.error(
+                    "Called 'stop' by '%s' in not allowed channel '%s'.",
+                    ctx.author,
+                    ctx.channel_id,
+                )
+                return
+
             logging.debug("Called 'stop' by '%s'.", ctx.author)
 
             game_server = self._get_game_server(ctx.options.name)
@@ -202,6 +235,17 @@ class DiscordBot(BotInterface):
         )
         @lightbulb.implements(lightbulb.SlashCommand)
         async def restart(ctx) -> None:
+            if (
+                len(self._configuration.allowed_channels) > 0
+                and str(ctx.channel_id) not in self._configuration.allowed_channels
+            ):
+                logging.error(
+                    "Called 'restart' by '%s' in not allowed channel '%s'.",
+                    ctx.author,
+                    ctx.channel_id,
+                )
+                return
+
             logging.debug("Called 'restart' by '%s'.", ctx.author)
 
             game_server = self._get_game_server(ctx.options.name)
@@ -240,6 +284,17 @@ class DiscordBot(BotInterface):
         )
         @lightbulb.implements(lightbulb.SlashCommand)
         async def backup_create(ctx) -> None:
+            if (
+                len(self._configuration.allowed_channels) > 0
+                and str(ctx.channel_id) not in self._configuration.allowed_channels
+            ):
+                logging.error(
+                    "Called 'backup_create' by '%s' in not allowed channel '%s'.",
+                    ctx.author,
+                    ctx.channel_id,
+                )
+                return
+
             logging.debug("Called 'backup_create' by '%s'.", ctx.author)
 
             game_server = self._get_game_server(ctx.options.name)
@@ -380,6 +435,17 @@ class DiscordBot(BotInterface):
         )
         @lightbulb.implements(lightbulb.SlashCommand)
         async def backup_restore(ctx) -> None:
+            if (
+                len(self._configuration.allowed_channels) > 0
+                and str(ctx.channel_id) not in self._configuration.allowed_channels
+            ):
+                logging.error(
+                    "Called 'backup_restore' by '%s' in not allowed channel '%s'.",
+                    ctx.author,
+                    ctx.channel_id,
+                )
+                return
+
             logging.debug("Called 'backup_restore' by '%s'.", ctx.author)
 
             game_server = self._get_game_server(ctx.options.name)
@@ -427,6 +493,17 @@ class DiscordBot(BotInterface):
         )
         @lightbulb.implements(lightbulb.SlashCommand)
         async def backup_list(ctx) -> None:
+            if (
+                len(self._configuration.allowed_channels) > 0
+                and str(ctx.channel_id) not in self._configuration.allowed_channels
+            ):
+                logging.error(
+                    "Called 'backup_list' by '%s' in not allowed channel '%s'.",
+                    ctx.author,
+                    ctx.channel_id,
+                )
+                return
+
             logging.debug("Called 'backup_list' by '%s'.", ctx.author)
 
             game_server = self._get_game_server(ctx.options.name)

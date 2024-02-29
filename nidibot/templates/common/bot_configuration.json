@@ -7,7 +7,8 @@
         {
             "type": "discord",
             "token": "your-bot-token",
-            "privileged_users": []
+            "privileged_users": [],
+            "allowed_channels": []
         }
     ],
     "server_provider": [

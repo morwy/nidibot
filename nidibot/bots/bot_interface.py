@@ -28,6 +28,7 @@ class BotConfiguration:
     type: str = ""
     token: str = ""
     privileged_users: list = field(default_factory=list)
+    allowed_channels: list = field(default_factory=list)
 
 
 class BotInterface(ABC):
