@@ -73,6 +73,14 @@ Lists available backups of specific game server.
 
 ---
 
+```batch
+/backup_restore [OPTIONAL:name] [REQUIRED:backup_name]
+```
+
+Restores specific backup on a game server.
+
+---
+
 Each command supports optional argument **name**. It is a convenience argument in case you have multiple game servers connected to the bot at once. In case if no name is specified, the command is applied to the first game server in the list.
 
 ## Quick start
