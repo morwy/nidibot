@@ -71,6 +71,9 @@ class TelegramBot(BotInterface):
         )
         self.__bot.add_handler(conversation_handler)
 
+        job_queue = self.__bot.job_queue
+        job_queue.run_repeating(self.__notify_loop, interval=5, first=0)  # type: ignore
+
     def __concatenate_sequences(
         self, sequence1: Sequence, sequence2: Sequence
     ) -> Sequence:
@@ -96,12 +99,12 @@ class TelegramBot(BotInterface):
                 "Creates backup of games server files and uploads them to storage.",
             ),
             BotCommand(
-                "backup_restore",
-                "Restores specific backup on a game server.",
-            ),
-            BotCommand(
                 "backup_list",
                 "Lists available backups of specific game server.",
+            ),
+            BotCommand(
+                "backup_restore",
+                "Restores specific backup on a game server.",
             ),
         ]
         await application.bot.set_my_commands(commands)
@@ -264,7 +267,7 @@ class TelegramBot(BotInterface):
 
         await context.bot.send_message(
             chat_id,
-            text="\u26A0 Starting server\! \u26A0",
+            text="\u26A0 Starting server\!",
             parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=ReplyKeyboardRemove(),
         )
@@ -334,7 +337,7 @@ class TelegramBot(BotInterface):
 
         await context.bot.send_message(
             chat_id,
-            text="\u26A0 Stopping server\! \u26A0",
+            text="\u26A0 Stopping server\!",
             parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=ReplyKeyboardRemove(),
         )
@@ -405,7 +408,7 @@ class TelegramBot(BotInterface):
 
         await context.bot.send_message(
             chat_id,
-            text="\u26A0 Restarting server\! \u26A0",
+            text="\u26A0 Restarting server\!",
             parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=ReplyKeyboardRemove(),
         )
@@ -477,7 +480,7 @@ class TelegramBot(BotInterface):
 
         await context.bot.send_message(
             chat_id,
-            text="\u26A0 Started creating backup of the server\, please wait\. \u26A0",
+            text="\u26A0 Started creating backup of the server\, please wait\.",
             parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=ReplyKeyboardRemove(),
         )
@@ -627,7 +630,7 @@ class TelegramBot(BotInterface):
             backup_description.readable_name, version=2
         )
         await update.message.reply_text(
-            text=f"\u26A0 Started restoring backup from {escaped_backup_name}\, please wait\. \u26A0",
+            text=f"\u26A0 Started restoring backup from {escaped_backup_name}\, please wait\.",
             parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=ReplyKeyboardRemove(),
         )
@@ -720,6 +723,25 @@ class TelegramBot(BotInterface):
             parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=ReplyKeyboardRemove(),
         )
+
+    async def __notify_loop(self, context: ContextTypes.DEFAULT_TYPE) -> None:
+        local_notify_messages: List[BotForwardMessage] = []
+        with self._notify_mutex:
+            local_notify_messages = self._notify_messages
+            self._notify_messages = []
+
+        if len(local_notify_messages) == 0:
+            return
+
+        for notify_message in local_notify_messages:
+            for channel in self._configuration.allowed_channels:
+                await context.bot.send_message(
+                    channel,
+                    text=f"__*{escape_markdown(text=notify_message.title, version=2)}*__"
+                    f"\n\u26A0 {escape_markdown(text=notify_message.message, version=2)}",
+                    parse_mode=ParseMode.MARKDOWN_V2,
+                    reply_markup=ReplyKeyboardRemove(),
+                )
 
     def notify(self, title: str, message: str) -> None:
         with self._notify_mutex:
