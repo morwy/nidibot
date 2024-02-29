@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 
 from nidibot.server_provider.nitrado_server_provider import NitradoServerProvider
-from nidibot.server_provider.server_provider_interface import (
-    ServerProviderConfiguration,
-)
+from nidibot.server_provider.server_provider_base import ServerProviderConfiguration
 
 
 class ServerProviderFactory:

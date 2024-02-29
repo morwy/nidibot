@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
@@ -38,7 +39,7 @@ class ServerStatus:
     player_names: list = field(default_factory=list)
 
 
-class ServerProviderInterface(ABC):
+class ServerProviderBase(ABC):
     def __init__(
         self,
         configuration: ServerProviderConfiguration,
@@ -63,6 +64,23 @@ class ServerProviderInterface(ABC):
         return os.path.join(
             self._root_backup_directory, self.name().lower(), game_name, server_id
         )
+
+    def _wait_for_status(
+        self,
+        server_id: str,
+        required_status: str,
+        timeout_seconds: int = 60,
+        wait_step_seconds: int = 1,
+    ) -> bool:
+        end_time = time.time() + timeout_seconds
+        while time.time() < end_time:
+            status = self.status(server_id)
+            if status.status == required_status:
+                return True
+
+            time.sleep(wait_step_seconds)
+
+        return False
 
     @abstractmethod
     def get_servers(self) -> list:

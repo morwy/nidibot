@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from nidibot.server_provider.server_provider_interface import (
-    ServerProviderInterface,
+from nidibot.server_provider.server_provider_base import (
+    ServerProviderBase,
     ServerStatus,
 )
 
@@ -12,7 +12,7 @@ class GameServer:
     """
 
     def __init__(
-        self, server_provider: ServerProviderInterface, server_id: str, server_name: str
+        self, server_provider: ServerProviderBase, server_id: str, server_name: str
     ) -> None:
         if not server_id:
             raise ValueError("Server ID is required!")

@@ -18,11 +18,11 @@ from nidibot.bots.bot_factory import BotFactory
 from nidibot.bots.bot_interface import BotConfiguration, BotInterface
 from nidibot.bots.telegram_bot import TelegramBot
 from nidibot.server_provider.game_server import GameServer
-from nidibot.server_provider.server_provider_factory import ServerProviderFactory
-from nidibot.server_provider.server_provider_interface import (
+from nidibot.server_provider.server_provider_base import (
+    ServerProviderBase,
     ServerProviderConfiguration,
-    ServerProviderInterface,
 )
+from nidibot.server_provider.server_provider_factory import ServerProviderFactory
 
 
 @dataclass
@@ -58,7 +58,7 @@ class Nidibot:
 
         self.__bots: List[BotInterface] = []
 
-        self.__server_providers: List[ServerProviderInterface] = (
+        self.__server_providers: List[ServerProviderBase] = (
             ServerProviderFactory.create_all(
                 configuration_list=self.__configuration.server_providers,
                 root_backup_path=root_backup_path,

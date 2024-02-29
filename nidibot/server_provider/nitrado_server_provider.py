@@ -19,9 +19,9 @@ import requests  # type: ignore
 
 from nidibot.bots.bot_interface import BackupDescription
 from nidibot.server_provider.game_server import GameServer
-from nidibot.server_provider.server_provider_interface import (
+from nidibot.server_provider.server_provider_base import (
+    ServerProviderBase,
     ServerProviderConfiguration,
-    ServerProviderInterface,
     ServerStatus,
 )
 
@@ -59,7 +59,7 @@ class NitradoServerInformation:
     mysql: NitradoMysqlConfiguration = field(default_factory=NitradoMysqlConfiguration)
 
 
-class NitradoServerProvider(ServerProviderInterface):
+class NitradoServerProvider(ServerProviderBase):
     def __init__(
         self,
         configuration: ServerProviderConfiguration,
@@ -113,9 +113,10 @@ class NitradoServerProvider(ServerProviderInterface):
         # Warning: Nitrado always changes last part of provided API version.
         expected_api_version = "nitrapi-1471"
         if expected_api_version not in content_json["message"]:
-            raise ValueError(
-                f"Nitrado API version was changed! Expected: {expected_api_version}, actual: "
-                f"{content_json['message']}."
+            logging.warning(
+                "Nitrado API version was changed! Expected: %s, actual: %s.",
+                expected_api_version,
+                content_json["message"],
             )
 
     def __download_ftp_folder(
@@ -132,13 +133,43 @@ class NitradoServerProvider(ServerProviderInterface):
                 local_parent_folder = pathlib.Path(local_filepath).parent.absolute()
                 pathlib.Path(local_parent_folder).mkdir(parents=True, exist_ok=True)
                 ftp_server.download(remote_filepath, local_filepath)
-                logging.debug("Downloaded '%s'.", remote_filepath)
+                logging.debug(
+                    "Downloaded '%s' to '%s'.", remote_filepath, local_filepath
+                )
 
             for folder_name in folders:
                 self.__download_ftp_folder(
                     ftp_server=ftp_server,
                     local_path=local_path,
                     remote_path=os.path.join(root_path, folder_name),
+                    ignore_folders=ignore_folders,
+                )
+
+            return
+
+    def __upload_ftp_folder(
+        self, ftp_server, local_path: str, remote_path: str, ignore_folders: list
+    ):
+        for root_path, folders, files in os.walk(top=local_path, topdown=True):
+            root_folder_name = os.path.basename(root_path)
+            if root_folder_name in ignore_folders:
+                return
+
+            for filename in files:
+                local_filepath = os.path.join(root_path, filename)
+                remote_filepath = ftp_server.path.join(remote_path, filename)
+
+                if remote_path != ".":
+                    ftp_server.makedirs(remote_path, exist_ok=True)
+
+                ftp_server.upload(local_filepath, remote_filepath)
+                logging.debug("Uploaded '%s' to '%s'.", local_filepath, remote_filepath)
+
+            for folder_name in folders:
+                self.__upload_ftp_folder(
+                    ftp_server=ftp_server,
+                    local_path=os.path.join(root_path, folder_name),
+                    remote_path=os.path.join(remote_path, folder_name),
                     ignore_folders=ignore_folders,
                 )
 
@@ -397,9 +428,7 @@ class NitradoServerProvider(ServerProviderInterface):
         try:
             start_time = time.time()
             with tempfile.TemporaryDirectory() as temp_folder_path:
-                datetime_now = datetime.now()
-                datetime_str = datetime_now.strftime("%Y%m%d_%H%M%S")
-
+                datetime_str = datetime.now().strftime("%Y%m%d_%H%M%S")
                 local_path = os.path.join(temp_folder_path, datetime_str)
                 pathlib.Path(local_path).mkdir(parents=True, exist_ok=True)
 
@@ -430,31 +459,30 @@ class NitradoServerProvider(ServerProviderInterface):
                     database_filepath = os.path.join(
                         mysql_folder_path, database_name + ".sql"
                     )
-                    mysqldump_command = [
-                        mysqldump_path,
-                        "--host",
-                        self.__servers[server_id].mysql.hostname,
-                        "--port",
-                        str(self.__servers[server_id].mysql.port),
-                        "--user",
-                        self.__servers[server_id].mysql.username,
-                        f"-p{self.__servers[server_id].mysql.password}",
-                        database_name,
-                        f"--result-file={database_filepath}",
-                    ]
 
-                    process = subprocess.Popen(
+                    mysqldump_command = (
+                        f"{mysqldump_path} --host {self.__servers[server_id].mysql.hostname} "
+                        f"--port {str(self.__servers[server_id].mysql.port)} "
+                        f"--user {self.__servers[server_id].mysql.username} "
+                        f"-p{self.__servers[server_id].mysql.password} "
+                        f"{database_name} > {database_filepath}"
+                    )
+
+                    # logging.debug("Executing: '%s'.", mysql_command)
+
+                    with subprocess.Popen(
                         mysqldump_command,
                         stdout=subprocess.PIPE,
                         stderr=subprocess.STDOUT,
+                        shell=True,
                         encoding="utf-8",
                         universal_newlines=True,
                         cwd=local_path,
-                    )
-                    for stdout_line in iter(process.stdout.readline, ""):  # type: ignore
-                        logging.info(stdout_line.replace("\n", ""))
-                    process.stdout.close()  # type: ignore
-                    _ = process.wait()
+                    ) as process:
+                        for stdout_line in iter(process.stdout.readline, ""):  # type: ignore
+                            logging.info(stdout_line.replace("\n", ""))
+                        process.stdout.close()  # type: ignore
+                        _ = process.wait()
 
                 else:
                     logging.warning(
@@ -479,7 +507,7 @@ class NitradoServerProvider(ServerProviderInterface):
                 )
 
             end_time = time.time()
-            logging.debug("FTP copy took %s.", end_time - start_time)
+            logging.debug("Backup creation took %s.", end_time - start_time)
 
         except Exception as exception:
             logging.exception(exception)
@@ -488,7 +516,86 @@ class NitradoServerProvider(ServerProviderInterface):
         return True
 
     def restore_backup(self, server_id: str = "", filepath: str = "") -> bool:
-        return False
+        status = self.status(server_id=server_id)
+        if status.status != "offline":
+            if not self.stop(server_id=server_id):
+                return False
+
+        if not self._wait_for_status(
+            server_id=server_id, required_status="offline", timeout_seconds=60
+        ):
+            return False
+
+        start_time = time.time()
+        with tempfile.TemporaryDirectory() as temp_folder_path:
+            shutil.unpack_archive(filepath, temp_folder_path)
+
+            #
+            # Copy game server files via FTP to temporary folder.
+            #
+            files_path = os.path.join(temp_folder_path, "files")
+            with ftputil.FTPHost(
+                self.__servers[server_id].ftp.hostname,
+                self.__servers[server_id].ftp.username,
+                self.__servers[server_id].ftp.password,
+            ) as ftp:
+                self.__upload_ftp_folder(
+                    ftp_server=ftp,
+                    local_path=files_path,
+                    remote_path=".",
+                    ignore_folders=["Crashes", "CrashReportClient"],
+                )
+
+            #
+            # Save MySQL database to temporary folder.
+            #
+            mysql_path = shutil.which("mysql")
+            if mysql_path is not None:
+                database_name = self.__servers[server_id].mysql.database
+                database_filepath = os.path.join(
+                    temp_folder_path, "mysql", database_name + ".sql"
+                )
+
+                if os.path.exists(database_filepath):
+                    mysql_command = (
+                        f"{mysql_path} --host={self.__servers[server_id].mysql.hostname} "
+                        f"--port={str(self.__servers[server_id].mysql.port)} "
+                        f"--user={self.__servers[server_id].mysql.username} "
+                        f"--password={self.__servers[server_id].mysql.password} "
+                        f"{database_name} < {database_filepath}"
+                    )
+
+                    # logging.debug("Executing: '%s'.", mysql_command)
+
+                    with subprocess.Popen(
+                        args=mysql_command,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        shell=True,
+                        encoding="utf-8",
+                        universal_newlines=True,
+                        cwd=temp_folder_path,
+                    ) as process:
+                        for stdout_line in iter(process.stdout.readline, ""):  # type: ignore
+                            logging.info(stdout_line.replace("\n", ""))
+                        process.stdout.close()  # type: ignore
+                        _ = process.wait()
+                else:
+                    logging.warning("No MySQL database file found, nothing to restore!")
+
+            else:
+                logging.warning(
+                    "No mysql is available in the system, please install it."
+                )
+
+        # Start server back if it was online before restore.
+        if status.status != "offline":
+            self.start(server_id=server_id)
+
+        end_time = time.time()
+        logging.debug("Backup restoring took %s.", end_time - start_time)
+
+        return True
 
     def list_backups(self, server_id: str = "") -> list:
         backup_directory = self._get_backup_directory_path(
