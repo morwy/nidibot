@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
+import asyncio
 import logging
 from datetime import date, datetime
 from itertools import chain
 from typing import List, Sequence
 
+import nest_asyncio  # type: ignore
 from telegram import BotCommand, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram.constants import ParseMode
 from telegram.ext import (
@@ -750,8 +752,22 @@ class TelegramBot(BotInterface):
             notify_message.message = message
             self._notify_messages.append(notify_message)
 
+    #
+    # A bit of tricky solution to run python-telegram-bot in separate thread.
+    #
+    async def __start_bot(self) -> None:
+        self.__bot.run_polling(
+            allowed_updates=Update.ALL_TYPES, close_loop=False, stop_signals=None
+        )
+
     def start(self) -> None:
+        nest_asyncio.apply()
+
         try:
-            self.__bot.run_polling(allowed_updates=Update.ALL_TYPES, close_loop=False)
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(self.__start_bot())
+            loop.close()
+
         except Exception as exception:
             logging.exception(exception)

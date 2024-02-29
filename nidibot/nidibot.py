@@ -135,22 +135,12 @@ class Nidibot:
         #
         # Run each bot in separate thread.
         #
-        # WARNING: a lousy solution to run python-telegram-bot in separate thread. To be fixed.
-        #
         threads: list = []
-        telegram_bot = None
         for bot in self.__bots:
-            if isinstance(bot, TelegramBot):
-                telegram_bot = bot
-                continue
-
             thread = threading.Thread(target=bot.start)
             thread.start()
 
             threads.append(thread)
-
-        if telegram_bot is not None:
-            telegram_bot.start()
 
         for thread in threads:
             thread.join()
