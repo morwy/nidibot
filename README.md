@@ -19,7 +19,6 @@ nidibot is a simple to install and configure bot for controlling your game serve
 ### Limitations
 
 * Telegram bot can not notify about game server status changes if 'allowed_channels' is empty. This is coming from Telegram API limitation.
-* There can be only one Telegram bot at the time. There is currently unresolved issue with running Telegram bot in thread.
 
 ### Commands
 
