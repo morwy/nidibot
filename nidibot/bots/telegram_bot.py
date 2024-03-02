@@ -51,6 +51,7 @@ class TelegramBot(BotInterface):
         ) = range(3)
 
         conversation_handler = ConversationHandler(
+            allow_reentry=True,
             entry_points=[CommandHandler("backup_restore", self.__backup_restore)],
             states={
                 self.__BACKUP_RESTORE_SERVER: [
@@ -592,14 +593,13 @@ class TelegramBot(BotInterface):
 
             return self.__BACKUP_RESTORE_FILEPATH
 
-        else:
-            logging.warning("No backups available!")
-            await update.message.reply_text(
-                escape_markdown(text="\u26D4 No backups available!", version=2),
-                reply_markup=ReplyKeyboardRemove(),
-            )
+        logging.warning("No backups available!")
+        await update.message.reply_text(
+            escape_markdown(text="\u26D4 No backups available!", version=2),
+            reply_markup=ReplyKeyboardRemove(),
+        )
 
-            return self.__BACKUP_RESTORE_CANCEL
+        return self.__BACKUP_RESTORE_CANCEL
 
     async def __backup_restore_start(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
