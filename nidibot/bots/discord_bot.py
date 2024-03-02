@@ -10,8 +10,12 @@ import lightbulb
 from hikari.api import MessageActionRowBuilder
 from lightbulb.ext import tasks
 
-from nidibot.bots.bot_interface import (BackupDescription, BotConfiguration,
-                                        BotForwardMessage, BotInterface)
+from nidibot.bots.bot_interface import (
+    BackupDescription,
+    BotConfiguration,
+    BotForwardMessage,
+    BotInterface,
+)
 from nidibot.server_provider.game_server import GameServer
 
 
@@ -459,22 +463,33 @@ class DiscordBot(BotInterface):
                 return
 
             backups = game_server.list_backups()
-            self._backups[ctx.options.name] = backups
+            if len(backups) > 0:
+                self._backups[ctx.options.name] = backups
 
-            embed = hikari.Embed(
-                title=title,
-                description="Select a backup:",
-                color=hikari.colors.Color(self.__color_orange),
-            )
+                embed = hikari.Embed(
+                    title=title,
+                    description="Select a backup:",
+                    color=hikari.colors.Color(self.__color_orange),
+                )
 
-            backup_buttons = await create_backup_buttons(ctx.bot, backups)
-            response = await ctx.respond(
-                embed=embed,
-                components=backup_buttons,
-            )
+                backup_buttons = await create_backup_buttons(ctx.bot, backups)
+                response = await ctx.respond(
+                    embed=embed,
+                    components=backup_buttons,
+                )
 
-            message = await response.message()
-            await handle_backup_restore(ctx, message, title, backups, game_server)
+                message = await response.message()
+                await handle_backup_restore(ctx, message, title, backups, game_server)
+
+            else:
+                logging.warning("No backups available!")
+                embed = hikari.Embed(
+                    title=title,
+                    description=":no_entry: No backups available!",
+                    color=hikari.colors.Color(self.__color_red),
+                )
+
+                await ctx.respond(embed=embed)
 
         @self.__bot.command
         @lightbulb.option(

@@ -575,20 +575,31 @@ class TelegramBot(BotInterface):
         if game_server is None:
             return self.__BACKUP_RESTORE_CANCEL
 
-        reply_keyboard = [[]]  # type: ignore
-        for backup_description in game_server.list_backups():
-            sub_keyboard = [[backup_description.readable_name]]
-            reply_keyboard = self.__concatenate_sequences(reply_keyboard, sub_keyboard)  # type: ignore
+        backups = game_server.list_backups()
+        if len(backups) > 0:
+            reply_keyboard = [[]]  # type: ignore
+            for backup_description in backups:
+                sub_keyboard = [[backup_description.readable_name]]
+                reply_keyboard = self.__concatenate_sequences(reply_keyboard, sub_keyboard)  # type: ignore
 
-        await update.message.reply_text(
-            "Please select backup:",
-            reply_markup=ReplyKeyboardMarkup(
-                reply_keyboard,
-                one_time_keyboard=True,
-            ),
-        )
+            await update.message.reply_text(
+                "Please select backup:",
+                reply_markup=ReplyKeyboardMarkup(
+                    reply_keyboard,
+                    one_time_keyboard=True,
+                ),
+            )
 
-        return self.__BACKUP_RESTORE_FILEPATH
+            return self.__BACKUP_RESTORE_FILEPATH
+
+        else:
+            logging.warning("No backups available!")
+            await update.message.reply_text(
+                escape_markdown(text="\u26D4 No backups available!", version=2),
+                reply_markup=ReplyKeyboardRemove(),
+            )
+
+            return self.__BACKUP_RESTORE_CANCEL
 
     async def __backup_restore_start(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
