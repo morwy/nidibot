@@ -22,36 +22,53 @@ jobs:
         python -m pip install --upgrade pip
         pip install build
 
-    - name: Get changelog since last release
-      uses: orhun/git-cliff-action@v3
-      id: git-cliff
-      with:
-        config: cliff.toml
-        args: --verbose
-      env:
-        OUTPUT: CHANGELOG.md
-  
-    - name: Commit CHANGELOG.md
-      run: |
-        git config user.name 'github-actions[bot]'
-        git config user.email 'github-actions[bot]@users.noreply.github.com'
-        set +e
-        git add CHANGELOG.md
-        git commit -m "Update changelog"
-        git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git main
-
     - name: Increase package version
       id: version
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         FILE_TO_COMMIT: setup.cfg
         DESTINATION_BRANCH: main
-        MESSAGE: Increased package version
+        MESSAGE: "chore(release): prepare for upcoming release (setup.cfg)"
       run: |
         OLD_VERSION=$(grep version setup.cfg | cut -d '=' -f2 | xargs)
         NEW_VERSION=$(echo $OLD_VERSION | awk -F. -v OFS=. 'NF==1{print ++$NF}; NF>1{if(length($NF+1)>length($NF))$(NF-1)++; $NF=sprintf("%0*d", length($NF), ($NF+1)%(10^length($NF))); print}')
         sed -i -e "s/$OLD_VERSION/$NEW_VERSION/g" setup.cfg
         echo "NEW_TAG_NAME=$NEW_VERSION" >> $GITHUB_OUTPUT
+        export SHA=$( git rev-parse $DESTINATION_BRANCH:$FILE_TO_COMMIT )
+        export CONTENT=$( base64 -i $FILE_TO_COMMIT )
+        gh api --method PUT /repos/:owner/:repo/contents/$FILE_TO_COMMIT \
+          --field message="$MESSAGE" \
+          --field content="$CONTENT" \
+          --field encoding="base64" \
+          --field branch="$DESTINATION_BRANCH" \
+          --field sha="$SHA"
+
+    - name: Generate a changelog
+      uses: orhun/git-cliff-action@v3
+      id: git-cliff-release-entry
+      with:
+        config: cliff.toml
+        args: -vv --latest --strip header
+      env:
+        OUTPUT: CHANGES.md
+
+    - name: Get changelog since last release
+      uses: orhun/git-cliff-action@v3
+      id: git-cliff-file
+      with:
+        config: cliff.toml
+        args: --verbose
+      env:
+        OUTPUT: CHANGELOG.md
+  
+    - name: Updated CHANGELOG.md
+      id: change-log-commit
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        FILE_TO_COMMIT: CHANGELOG.md
+        DESTINATION_BRANCH: main
+        MESSAGE: "chore(release): prepare for upcoming release (CHANGELOG.md)"
+      run: |
         export SHA=$( git rev-parse $DESTINATION_BRANCH:$FILE_TO_COMMIT )
         export CONTENT=$( base64 -i $FILE_TO_COMMIT )
         gh api --method PUT /repos/:owner/:repo/contents/$FILE_TO_COMMIT \
@@ -68,7 +85,7 @@ jobs:
       uses: ncipollo/release-action@v1
       with:
         artifacts: "dist/nidibot-*.tar.gz, dist/nidibot-*.whl"
-        body: "${{ steps.git-cliff.outputs.changelog }}"
+        body: "${{ steps.git-cliff-release-entry.outputs.content }}"
         tag: "v${{ steps.version.outputs.NEW_TAG_NAME }}"
 
     - name: Publish package to PyPI
