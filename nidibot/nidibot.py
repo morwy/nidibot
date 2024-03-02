@@ -14,8 +14,8 @@ from typing import List
 import pkg_resources  # type: ignore
 from dacite import from_dict
 
+from nidibot.bots.bot_base import BotBase, BotConfiguration
 from nidibot.bots.bot_factory import BotFactory
-from nidibot.bots.bot_interface import BotConfiguration, BotInterface
 from nidibot.bots.telegram_bot import TelegramBot
 from nidibot.server_provider.game_server import GameServer
 from nidibot.server_provider.server_provider_base import (
@@ -56,7 +56,7 @@ class Nidibot:
 
         pathlib.Path(root_backup_path).mkdir(parents=True, exist_ok=True)
 
-        self.__bots: List[BotInterface] = []
+        self.__bots: List[BotBase] = []
 
         self.__server_providers: List[ServerProviderBase] = (
             ServerProviderFactory.create_all(

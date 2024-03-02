@@ -17,7 +17,7 @@ from typing import Dict, List
 import ftputil  # type: ignore
 import requests  # type: ignore
 
-from nidibot.bots.bot_interface import BackupDescription
+from nidibot.bots.bot_base import BackupDescription
 from nidibot.server_provider.game_server import GameServer
 from nidibot.server_provider.server_provider_base import (
     ServerProviderBase,

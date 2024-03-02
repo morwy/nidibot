@@ -10,16 +10,16 @@ import lightbulb
 from hikari.api import MessageActionRowBuilder
 from lightbulb.ext import tasks
 
-from nidibot.bots.bot_interface import (
+from nidibot.bots.bot_base import (
     BackupDescription,
+    BotBase,
     BotConfiguration,
     BotForwardMessage,
-    BotInterface,
 )
 from nidibot.server_provider.game_server import GameServer
 
 
-class DiscordBot(BotInterface):
+class DiscordBot(BotBase):
     def __init__(self, configuration: BotConfiguration, game_servers: List[GameServer]):
         super().__init__(configuration=configuration, game_servers=game_servers)
 

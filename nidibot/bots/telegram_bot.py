@@ -18,11 +18,11 @@ from telegram.ext import (
 )
 from telegram.helpers import escape_markdown
 
-from nidibot.bots.bot_interface import BotConfiguration, BotForwardMessage, BotInterface
+from nidibot.bots.bot_base import BotBase, BotConfiguration, BotForwardMessage
 from nidibot.server_provider.game_server import GameServer
 
 
-class TelegramBot(BotInterface):
+class TelegramBot(BotBase):
     def __init__(self, configuration: BotConfiguration, game_servers: List[GameServer]):
         super().__init__(configuration=configuration, game_servers=game_servers)
 

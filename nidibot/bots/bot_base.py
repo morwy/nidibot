@@ -31,7 +31,7 @@ class BotConfiguration:
     allowed_channels: list = field(default_factory=list)
 
 
-class BotInterface(ABC):
+class BotBase(ABC):
     def __init__(self, configuration: BotConfiguration, game_servers: List[GameServer]):
         self._configuration = configuration
         self._game_servers = game_servers
