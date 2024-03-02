@@ -48,7 +48,7 @@ jobs:
       id: git-cliff-release-entry
       with:
         config: cliff.toml
-        args: -vv --latest --strip header
+        args: --verbose --strip header --tag v${{ steps.version.outputs.NEW_TAG_NAME }}
       env:
         OUTPUT: CHANGES.md
 
@@ -57,7 +57,7 @@ jobs:
       id: git-cliff-file
       with:
         config: cliff.toml
-        args: --verbose
+        args: --verbose --tag v${{ steps.version.outputs.NEW_TAG_NAME }}
       env:
         OUTPUT: CHANGELOG.md
   
