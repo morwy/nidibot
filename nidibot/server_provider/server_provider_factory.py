@@ -5,23 +5,23 @@ from nidibot.server_provider.server_provider_base import ServerProviderConfigura
 
 
 class ServerProviderFactory:
+    __supported_server_providers = {
+        "nitrado": NitradoServerProvider,
+    }
+
     @staticmethod
     def create(
         configuration: ServerProviderConfiguration,
         root_backup_path: str,
         notify_callback,
     ):
-        server_providers = {
-            "nitrado": NitradoServerProvider,
-        }
-
-        if configuration.type not in server_providers:
+        if configuration.type not in ServerProviderFactory.__supported_server_providers:
             if not configuration.type:
                 raise ValueError("Empty bot type provided!")
 
             raise ValueError("Unknown bot type provided!")
 
-        return server_providers[configuration.type](
+        return ServerProviderFactory.__supported_server_providers[configuration.type](
             configuration=configuration,
             backup_directory=root_backup_path,
             notify_callback=notify_callback,
