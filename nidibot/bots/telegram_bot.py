@@ -75,7 +75,11 @@ class TelegramBot(BotBase):
         self.__bot.add_handler(conversation_handler)
 
         job_queue = self.__bot.job_queue
-        job_queue.run_repeating(self.__notify_loop, interval=5, first=0)  # type: ignore
+        job_queue.run_repeating(  # type: ignore
+            self.__notify_loop,
+            interval=self._configuration.notify_polling_seconds,
+            first=0,
+        )
 
     def __concatenate_sequences(
         self, sequence1: Sequence, sequence2: Sequence

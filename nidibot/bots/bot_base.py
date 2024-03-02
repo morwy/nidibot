@@ -29,6 +29,7 @@ class BotConfiguration:
     token: str = ""
     privileged_users: list = field(default_factory=list)
     allowed_channels: list = field(default_factory=list)
+    notify_polling_seconds: int = 5
 
 
 class BotBase(ABC):

@@ -136,7 +136,8 @@ python3 -c 'from nidibot.nidibot import Nidibot; Nidibot.initialize_folder()'
             "type": "discord",
             "token": "your-bot-token",
             "privileged_users": [],
-            "allowed_channels": []
+            "allowed_channels": [],
+            "notify_polling_seconds": 5
         }
     ],
     "server_providers": [

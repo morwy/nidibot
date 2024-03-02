@@ -533,7 +533,7 @@ class DiscordBot(BotBase):
             )
             await ctx.respond(embed=embed)
 
-        @tasks.task(s=5, auto_start=True)
+        @tasks.task(s=self._configuration.notify_polling_seconds, auto_start=True)
         async def notify_loop():
             local_notify_messages: List[BotForwardMessage] = []
             with self._notify_mutex:
