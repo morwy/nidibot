@@ -6,6 +6,23 @@ All notable changes to this project will be documented in this file.
 
 ### 🚀 Features
 
+- *(bots)* Controlling notify period from nidibot configuration.
+
+### 🐛 Bug Fixes
+
+- *(ci)* Fixed generation of CHANGELOG.md and GitHub release entry.
+- *(bots)* Fixed issue with crash when there were no backups available.
+- *(telegram-bot)* Dropping pending signals from Telegram server for avoiding spam on nidibot restart.
+- *(telegram-bot)* Fixed issue when conversation was not started again after one run.
+
+### 🚜 Refactor
+
+- *(bot-base)* Renamed BotInterface to BotBase.
+
+## [1.1.7] - 2024-03-02
+
+### 🚀 Features
+
 - *(cd)* Added usage of git-cliff GitHub Action.
 
 ### 🚜 Refactor
