@@ -768,7 +768,10 @@ class TelegramBot(BotInterface):
     #
     async def __start_bot(self) -> None:
         self.__bot.run_polling(
-            allowed_updates=Update.ALL_TYPES, close_loop=False, stop_signals=None
+            allowed_updates=Update.ALL_TYPES,
+            close_loop=False,
+            stop_signals=None,
+            drop_pending_updates=True,
         )
 
     def start(self) -> None:
