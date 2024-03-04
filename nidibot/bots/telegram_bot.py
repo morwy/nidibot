@@ -39,8 +39,10 @@ class TelegramBot(BotBase):
 
         (
             self.__PROCESS_OPERATION,
+            self.__BACKUP_RESTORE_SERVER,
+            self.__BACKUP_RESTORE_FILEPATH,
             self.__CONVERSATION_END,
-        ) = range(2)
+        ) = range(4)
 
         common_command_handler = ConversationHandler(
             allow_reentry=True,
@@ -72,12 +74,6 @@ class TelegramBot(BotBase):
         )
         self.__bot.add_handler(common_command_handler)
 
-        (
-            self.__BACKUP_RESTORE_SERVER,
-            self.__BACKUP_RESTORE_FILEPATH,
-            self.__BACKUP_RESTORE_END,
-        ) = range(3)
-
         backup_restore_handler = ConversationHandler(
             allow_reentry=True,
             entry_points=[CommandHandler("backup_restore", self.__backup_restore)],
@@ -94,7 +90,7 @@ class TelegramBot(BotBase):
                         callback=self.__backup_restore_filepath,
                     )
                 ],
-                self.__BACKUP_RESTORE_END: [
+                self.__CONVERSATION_END: [
                     MessageHandler(filters=None, callback=self.__conversation_end)
                 ],
             },
@@ -379,17 +375,17 @@ class TelegramBot(BotBase):
     ) -> int:
         if update.effective_user is None or update.effective_user.username is None:
             logging.critical("No username in incoming message!")
-            return self.__BACKUP_RESTORE_END
+            return self.__CONVERSATION_END
 
         username = update.effective_user.username
 
         if update.message is None or update.message.text is None:
             logging.critical("No chat_id in incoming message!")
-            return self.__BACKUP_RESTORE_END
+            return self.__CONVERSATION_END
 
         if update.effective_message is None or update.effective_message.chat_id is None:
             logging.critical("No chat_id in incoming message!")
-            return self.__BACKUP_RESTORE_END
+            return self.__CONVERSATION_END
 
         chat_id = update.effective_message.chat_id
 
@@ -402,7 +398,7 @@ class TelegramBot(BotBase):
                 username,
                 chat_id,
             )
-            return self.__BACKUP_RESTORE_END
+            return self.__CONVERSATION_END
 
         logging.debug("Called 'backup_restore' by '%s'.", username)
 
@@ -412,7 +408,7 @@ class TelegramBot(BotBase):
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
-            return self.__BACKUP_RESTORE_END
+            return self.__CONVERSATION_END
 
         reply_keyboard = [[]]  # type: ignore
         for game_server in self._game_server_names:
@@ -435,13 +431,13 @@ class TelegramBot(BotBase):
     ) -> int:
         if update.message is None or update.message.from_user is None:
             logging.critical("No username in incoming message!")
-            return self.__BACKUP_RESTORE_END
+            return self.__CONVERSATION_END
 
         username = update.message.from_user.username
 
         if update.message is None or update.message.text is None:
             logging.critical("No text in incoming message!")
-            return self.__BACKUP_RESTORE_END
+            return self.__CONVERSATION_END
 
         server_name = update.message.text
 
@@ -454,7 +450,7 @@ class TelegramBot(BotBase):
             (x for x in self._game_servers if x.name() == server_name), None
         )
         if game_server is None:
-            return self.__BACKUP_RESTORE_END
+            return self.__CONVERSATION_END
 
         backups = game_server.list_backups()
         if len(backups) > 0:
@@ -483,27 +479,27 @@ class TelegramBot(BotBase):
             reply_markup=ReplyKeyboardRemove(),
         )
 
-        return self.__BACKUP_RESTORE_END
+        return self.__CONVERSATION_END
 
     async def __backup_restore_filepath(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
     ) -> int:
         if update.message is None or update.message.from_user is None:
             logging.critical("No username in incoming message!")
-            return self.__BACKUP_RESTORE_END
+            return self.__CONVERSATION_END
 
         username = update.message.from_user.username
 
         if update.message is None or update.message.text is None:
             logging.critical("No text in incoming message!")
-            return self.__BACKUP_RESTORE_END
+            return self.__CONVERSATION_END
 
         backup_readable_name = update.message.text
 
         logging.debug("'%s' selected backup '%s'.", username, backup_readable_name)
 
         if context.user_data is None:
-            return self.__BACKUP_RESTORE_END
+            return self.__CONVERSATION_END
 
         server_name = context.user_data["game_server"]
         game_server = next(
@@ -511,17 +507,17 @@ class TelegramBot(BotBase):
             None,
         )
         if game_server is None:
-            return self.__BACKUP_RESTORE_END
+            return self.__CONVERSATION_END
 
         backups = self._backups[server_name]
         if backups is None:
-            return self.__BACKUP_RESTORE_END
+            return self.__CONVERSATION_END
 
         backup_description = next(
             (x for x in backups if x.readable_name == backup_readable_name), None
         )
         if backup_description is None:
-            return self.__BACKUP_RESTORE_END
+            return self.__CONVERSATION_END
 
         escaped_backup_name = escape_markdown(
             backup_description.readable_name, version=2
