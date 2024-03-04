@@ -551,6 +551,7 @@ class TelegramBot(BotBase):
             reply_markup=ReplyKeyboardMarkup(
                 reply_keyboard,
                 one_time_keyboard=True,
+                resize_keyboard=True,
             ),
         )
 
@@ -594,6 +595,7 @@ class TelegramBot(BotBase):
                 reply_markup=ReplyKeyboardMarkup(
                     reply_keyboard,
                     one_time_keyboard=True,
+                    resize_keyboard=True,
                 ),
             )
 
