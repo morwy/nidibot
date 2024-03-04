@@ -106,7 +106,29 @@ class TelegramBot(BotBase):
         )
         self.__bot.add_handler(stop_handler)
 
-        self.__bot.add_handler(CommandHandler("restart", self.__restart))
+        (
+            self.__RESTART_SERVER,
+            self.__RESTART_END,
+        ) = range(2)
+
+        restart_handler = ConversationHandler(
+            allow_reentry=True,
+            entry_points=[CommandHandler("restart", self.__restart)],
+            states={
+                self.__RESTART_SERVER: [
+                    MessageHandler(
+                        filters=None,
+                        callback=self.__restart_server,
+                    )
+                ],
+                self.__RESTART_END: [
+                    MessageHandler(filters=None, callback=self.__conversation_end)
+                ],
+            },
+            fallbacks=[MessageHandler(filters=None, callback=self.__conversation_end)],
+        )
+        self.__bot.add_handler(restart_handler)
+
         self.__bot.add_handler(CommandHandler("backup_create", self.__backup_create))
         self.__bot.add_handler(CommandHandler("backup_list", self.__backup_list))
 
@@ -498,22 +520,20 @@ class TelegramBot(BotBase):
 
         return self.__STOP_END
 
-    async def __restart(
-        self, update: Update, context: ContextTypes.DEFAULT_TYPE
-    ) -> None:
-        args = []
-        if context.args is not None:
-            args = context.args
-
+    async def __restart(self, update: Update, _: ContextTypes.DEFAULT_TYPE) -> int:
         if update.effective_user is None or update.effective_user.username is None:
             logging.critical("No username in incoming message!")
-            return
+            return self.__RESTART_END
 
         username = update.effective_user.username
 
+        if update.message is None or update.message.text is None:
+            logging.critical("No chat_id in incoming message!")
+            return self.__RESTART_END
+
         if update.effective_message is None or update.effective_message.chat_id is None:
             logging.critical("No chat_id in incoming message!")
-            return
+            return self.__RESTART_END
 
         chat_id = update.effective_message.chat_id
 
@@ -526,39 +546,65 @@ class TelegramBot(BotBase):
                 username,
                 chat_id,
             )
-            return
+            return self.__RESTART_END
+
         logging.debug("Called 'restart' by '%s'.", username)
 
-        if len(args) == 0:
-            reply_keyboard = [[]]  # type: ignore
-            for game_server in self._game_server_names:
-                sub_keyboard = [[f"/restart {game_server}"]]
-                reply_keyboard = self.__concatenate_sequences(reply_keyboard, sub_keyboard)  # type: ignore
-
-            markup = ReplyKeyboardMarkup(
-                reply_keyboard,
-                one_time_keyboard=False,
-                resize_keyboard=True,
-            )
-
-            await context.bot.send_message(
-                chat_id,
-                text=r"Please select server\!",
-                parse_mode=ParseMode.MARKDOWN_V2,
-                reply_markup=markup,
-            )
-            return
-
-        game_server = self._get_game_server(args[0])
-
         if username not in self._configuration.privileged_users:
-            await context.bot.send_message(
-                chat_id,
-                text="Sorry but you don't have rights to call this command\! \u1F925",
+            await update.message.reply_text(
+                "Sorry but you don't have rights to call this command\! \u1F925",
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
-            return
+            return self.__RESTART_END
+
+        reply_keyboard = [[]]  # type: ignore
+        for game_server in self._game_server_names:
+            sub_keyboard = [[game_server]]
+            reply_keyboard = self.__concatenate_sequences(reply_keyboard, sub_keyboard)  # type: ignore
+
+        await update.message.reply_text(
+            "Please select server:",
+            reply_markup=ReplyKeyboardMarkup(
+                reply_keyboard,
+                one_time_keyboard=True,
+                resize_keyboard=True,
+            ),
+        )
+
+        return self.__RESTART_SERVER
+
+    async def __restart_server(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> int:
+        if update.message is None or update.message.from_user is None:
+            logging.critical("No username in incoming message!")
+            return self.__RESTART_END
+
+        username = update.message.from_user.username
+
+        if update.message is None or update.message.text is None:
+            logging.critical("No text in incoming message!")
+            return self.__RESTART_END
+
+        server_name = update.message.text
+
+        if context.user_data is not None:
+            context.user_data["game_server"] = server_name
+
+        if update.effective_message is None or update.effective_message.chat_id is None:
+            logging.critical("No chat_id in incoming message!")
+            return self.__RESTART_END
+
+        chat_id = update.effective_message.chat_id
+
+        logging.debug("'%s' selected server '%s'.", username, server_name)
+
+        game_server = next(
+            (x for x in self._game_servers if x.name() == server_name), None
+        )
+        if game_server is None:
+            return self.__RESTART_END
 
         await context.bot.send_message(
             chat_id,
@@ -568,6 +614,8 @@ class TelegramBot(BotBase):
         )
 
         game_server.restart()
+
+        return self.__RESTART_END
 
     async def __backup_create(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
