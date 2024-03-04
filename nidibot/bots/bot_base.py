@@ -46,6 +46,12 @@ class BotBase(ABC):
         self._notify_mutex = Lock()
         self._notify_messages: List[BotForwardMessage] = []
 
+        self._emoji_no_access = "\U0001F925"
+        self._emoji_ok = "\U00002705"
+        self._emoji_attention = "\U000026A0"
+        self._emoji_bad = "\U000026D4"
+        self._emoji_unknown = "\U00002049\U0000FE0F"
+
     def _get_response_title(self, game_server: GameServer) -> str:
         server_status = game_server.status()
 

@@ -7,15 +7,11 @@ from itertools import chain
 from typing import List, Sequence
 
 import nest_asyncio  # type: ignore
-from telegram import BotCommand, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
+from telegram import (BotCommand, ReplyKeyboardMarkup, ReplyKeyboardRemove,
+                      Update)
 from telegram.constants import ParseMode
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    ContextTypes,
-    ConversationHandler,
-    MessageHandler,
-)
+from telegram.ext import (Application, CommandHandler, ContextTypes,
+                          ConversationHandler, MessageHandler)
 from telegram.helpers import escape_markdown
 
 from nidibot.bots.bot_base import BotBase, BotConfiguration, BotForwardMessage
@@ -328,19 +324,19 @@ class TelegramBot(BotBase):
         server_status = game_server.status()
 
         if server_status.status == "online":
-            status_smiley = "\u2705"
+            status_emoji = self._emoji_ok
         elif server_status.status == "offline":
-            status_smiley = "\u26D4"
+            status_emoji = self._emoji_bad
         elif server_status.status == "restarting":
-            status_smiley = "\u26A0"
+            status_emoji = self._emoji_attention
         else:
-            status_smiley = "\u203D"
+            status_emoji = self._emoji_unknown
 
         if server_status.update_available:
-            update_smiley = "\u26A0"
+            update_emoji = self._emoji_attention
             update_text = "yes"
         else:
-            update_smiley = "\u2705"
+            update_emoji = self._emoji_ok
             update_text = "no"
 
         date_time = server_status.available_until.split(" ")
@@ -355,10 +351,10 @@ class TelegramBot(BotBase):
         response_text += (
             f"*Address:* {escape_markdown(server_status.address, version=2)}\n"
         )
-        response_text += f"*Status:* {status_smiley} {server_status.status}\n"
+        response_text += f"*Status:* {status_emoji} {server_status.status}\n"
         response_text += f"*Players:* {server_status.players_connected} / {server_status.players_limit}\n"
         response_text += f"*Available until:* {escape_markdown(server_status.available_until, version=2)} {escape_markdown(days_left, version=2)}\n"
-        response_text += f"*Update available:* {update_smiley} {update_text}"
+        response_text += f"*Update available:* {update_emoji} {update_text}"
 
         await context.bot.send_message(
             chat_id,
@@ -401,7 +397,7 @@ class TelegramBot(BotBase):
 
         if username not in self._configuration.privileged_users:
             await update.message.reply_text(
-                "Sorry but you don't have rights to call this command\\! \u1F925",
+                f"Sorry but you don't have rights to call this command\\! {self._emoji_no_access}",
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
@@ -457,7 +453,7 @@ class TelegramBot(BotBase):
 
         await context.bot.send_message(
             chat_id,
-            text="\u26A0 Starting server\\!",
+            text=f"{self._emoji_attention} Starting server\\!",
             parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=ReplyKeyboardRemove(),
         )
@@ -498,7 +494,7 @@ class TelegramBot(BotBase):
 
         if username not in self._configuration.privileged_users:
             await update.message.reply_text(
-                "Sorry but you don't have rights to call this command\\! \u1F925",
+                f"Sorry but you don't have rights to call this command\\! {self._emoji_no_access}",
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
@@ -554,7 +550,7 @@ class TelegramBot(BotBase):
 
         await context.bot.send_message(
             chat_id,
-            text="\u26A0 Stopping server\\!",
+            text=f"{self._emoji_attention} Stopping server\\!",
             parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=ReplyKeyboardRemove(),
         )
@@ -595,7 +591,7 @@ class TelegramBot(BotBase):
 
         if username not in self._configuration.privileged_users:
             await update.message.reply_text(
-                "Sorry but you don't have rights to call this command\\! \u1F925",
+                f"Sorry but you don't have rights to call this command\\! {self._emoji_no_access}",
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
@@ -651,7 +647,7 @@ class TelegramBot(BotBase):
 
         await context.bot.send_message(
             chat_id,
-            text="\u26A0 Restarting server\\!",
+            text=f"{self._emoji_attention} Restarting server\\!",
             parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=ReplyKeyboardRemove(),
         )
@@ -694,7 +690,7 @@ class TelegramBot(BotBase):
 
         if username not in self._configuration.privileged_users:
             await update.message.reply_text(
-                "Sorry but you don't have rights to call this command\\! \u1F925",
+                f"Sorry but you don't have rights to call this command\\! {self._emoji_no_access}",
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
@@ -750,7 +746,7 @@ class TelegramBot(BotBase):
 
         await context.bot.send_message(
             chat_id,
-            text="\u26A0 Started creating backup of the server\\, please wait\\.",
+            text=f"{self._emoji_attention} Started creating backup of the server\\, please wait\\.",
             parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=ReplyKeyboardRemove(),
         )
@@ -758,14 +754,14 @@ class TelegramBot(BotBase):
         if game_server.create_backup():
             await context.bot.send_message(
                 chat_id,
-                text="\u2705 Backup was created successfully\\!",
+                text=f"{self._emoji_ok} Backup was created successfully\\!",
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
         else:
             await context.bot.send_message(
                 chat_id,
-                text="\u26D4 Backup creation failed\\, please check bot logs\\!",
+                text=f"{self._emoji_bad} Backup creation failed\\, please check bot logs\\!",
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
@@ -806,7 +802,7 @@ class TelegramBot(BotBase):
 
         if username not in self._configuration.privileged_users:
             await update.message.reply_text(
-                "Sorry but you don't have rights to call this command\\! \u1F925",
+                f"Sorry but you don't have rights to call this command\\! {self._emoji_no_access}",
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
@@ -874,7 +870,10 @@ class TelegramBot(BotBase):
 
         logging.warning("No backups available!")
         await update.message.reply_text(
-            escape_markdown(text="\u26D4 No backups available!", version=2),
+            escape_markdown(
+                text=f"{self._emoji_bad} No backups available!",
+                version=2,
+            ),
             reply_markup=ReplyKeyboardRemove(),
         )
 
@@ -922,20 +921,20 @@ class TelegramBot(BotBase):
             backup_description.readable_name, version=2
         )
         await update.message.reply_text(
-            text=f"\u26A0 Started restoring backup from {escaped_backup_name}\\, please wait\\.",
+            text=f"{self._emoji_attention} Started restoring backup from {escaped_backup_name}\\, please wait\\.",
             parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=ReplyKeyboardRemove(),
         )
 
         if game_server.restore_backup(backup_description.filepath):
             await update.message.reply_text(
-                text=f"\u2705 Backup from {escaped_backup_name} was restored successfully\\!",
+                text=f"{self._emoji_ok} Backup from {escaped_backup_name} was restored successfully\\!",
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
         else:
             await update.message.reply_text(
-                text=f"\u26D4 Restoring backup from {escaped_backup_name} failed\\, please check bot logs\\!",
+                text=f"{self._emoji_bad} Restoring backup from {escaped_backup_name} failed\\, please check bot logs\\!",
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
@@ -979,7 +978,7 @@ class TelegramBot(BotBase):
 
         if username not in self._configuration.privileged_users:
             await update.message.reply_text(
-                "Sorry but you don't have rights to call this command\\! \u1F925",
+                f"Sorry but you don't have rights to call this command\\! {self._emoji_no_access}",
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
@@ -1064,7 +1063,7 @@ class TelegramBot(BotBase):
                 await context.bot.send_message(
                     channel,
                     text=f"__*{escape_markdown(text=notify_message.title, version=2)}*__"
-                    f"\n\u26A0 {escape_markdown(text=notify_message.message, version=2)}",
+                    f"\n{self._emoji_attention} {escape_markdown(text=notify_message.message, version=2)}",
                     parse_mode=ParseMode.MARKDOWN_V2,
                     reply_markup=ReplyKeyboardRemove(),
                 )

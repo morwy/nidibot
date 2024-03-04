@@ -66,16 +66,16 @@ class DiscordBot(BotBase):
             title = self._get_response_title(game_server)
 
             if server_status.status == "online":
-                status_smiley = ":white_check_mark:"
+                status_emoji = self._emoji_ok
                 status_color = hikari.colors.Color(self.__color_green)
             elif server_status.status == "offline":
-                status_smiley = ":no_entry:"
+                status_emoji = self._emoji_bad
                 status_color = hikari.colors.Color(self.__color_red)
             elif server_status.status == "restarting":
-                status_smiley = ":warning:"
+                status_emoji = self._emoji_attention
                 status_color = hikari.colors.Color(self.__color_orange)
             else:
-                status_smiley = ":interrobang:"
+                status_emoji = self._emoji_unknown
                 status_color = hikari.colors.Color(self.__color_orange)
 
             embed = hikari.Embed(
@@ -88,7 +88,7 @@ class DiscordBot(BotBase):
             )
             embed.add_field(
                 name="Status:",
-                value=f"{status_smiley} {server_status.status}",
+                value=f"{status_emoji} {server_status.status}",
                 inline=True,
             )
 
@@ -99,11 +99,11 @@ class DiscordBot(BotBase):
                 players += f" ({server_status.player_names})"
             embed.add_field(name="Players:", value=f"{players}", inline=True)
 
-            update_smiley = ""
+            update_emoji = ""
             if server_status.update_available:
-                update_smiley = ":warning:"
+                update_emoji = self._emoji_attention
             else:
-                update_smiley = ":white_check_mark:"
+                update_emoji = self._emoji_ok
 
             date_time = server_status.available_until.split(" ")
             date_parts = date_time[0].split("-")
@@ -118,7 +118,7 @@ class DiscordBot(BotBase):
             )
             embed.add_field(
                 name="Update available:",
-                value=f"{update_smiley} {'yes' if server_status.update_available else 'no'}",
+                value=f"{update_emoji} {'yes' if server_status.update_available else 'no'}",
                 inline=True,
             )
 
@@ -157,7 +157,7 @@ class DiscordBot(BotBase):
             if user not in self._configuration.privileged_users:
                 embed = hikari.Embed(
                     title=title,
-                    description="Sorry but you don't have rights to call this command! :liar:",
+                    description=f"Sorry but you don't have rights to call this command! {self._emoji_no_access}",
                     color=hikari.colors.Color(self.__color_red),
                 )
 
@@ -166,7 +166,7 @@ class DiscordBot(BotBase):
 
             embed = hikari.Embed(
                 title=title,
-                description=":warning: Starting server!",
+                description=f"{self._emoji_attention} Starting server!",
                 color=hikari.colors.Color(self.__color_red),
             )
             await ctx.respond(embed=embed)
@@ -206,7 +206,7 @@ class DiscordBot(BotBase):
             if user not in self._configuration.privileged_users:
                 embed = hikari.Embed(
                     title=title,
-                    description="Sorry but you don't have rights to call this command! :liar:",
+                    description=f"Sorry but you don't have rights to call this command! {self._emoji_no_access}",
                     color=hikari.colors.Color(self.__color_red),
                 )
 
@@ -215,7 +215,7 @@ class DiscordBot(BotBase):
 
             embed = hikari.Embed(
                 title=title,
-                description=":warning: Stopping server!",
+                description=f"{self._emoji_attention} Stopping server!",
                 color=hikari.colors.Color(self.__color_red),
             )
             await ctx.respond(embed=embed)
@@ -255,7 +255,7 @@ class DiscordBot(BotBase):
             if user not in self._configuration.privileged_users:
                 embed = hikari.Embed(
                     title=title,
-                    description="Sorry but you don't have rights to call this command! :liar:",
+                    description=f"Sorry but you don't have rights to call this command! {self._emoji_no_access}",
                     color=hikari.colors.Color(self.__color_red),
                 )
 
@@ -264,7 +264,7 @@ class DiscordBot(BotBase):
 
             embed = hikari.Embed(
                 title=title,
-                description=":warning: Restarting server!",
+                description=f"{self._emoji_attention} Restarting server!",
                 color=hikari.colors.Color(self.__color_red),
             )
             await ctx.respond(embed=embed)
@@ -304,7 +304,7 @@ class DiscordBot(BotBase):
             if user not in self._configuration.privileged_users:
                 embed = hikari.Embed(
                     title=title,
-                    description="Sorry but you don't have rights to call this command! :liar:",
+                    description=f"Sorry but you don't have rights to call this command! {self._emoji_no_access}",
                     color=hikari.colors.Color(self.__color_red),
                 )
 
@@ -313,7 +313,7 @@ class DiscordBot(BotBase):
 
             embed = hikari.Embed(
                 title=title,
-                description=":warning: Started creating backup of the server, please wait.",
+                description=f"{self._emoji_attention} Started creating backup of the server, please wait.",
                 color=hikari.colors.Color(self.__color_orange),
             )
             await ctx.respond(embed=embed)
@@ -321,13 +321,13 @@ class DiscordBot(BotBase):
             if game_server.create_backup():
                 embed = hikari.Embed(
                     title=title,
-                    description=":white_check_mark: Backup was created successfully!",
+                    description=f"{self._emoji_ok} Backup was created successfully!",
                     color=hikari.colors.Color(self.__color_green),
                 )
             else:
                 embed = hikari.Embed(
                     title=title,
-                    description=":no_entry: Backup creation failed, please check bot logs!",
+                    description=f"{self._emoji_bad} Backup creation failed, please check bot logs!",
                     color=hikari.colors.Color(self.__color_red),
                 )
 
@@ -402,7 +402,7 @@ class DiscordBot(BotBase):
 
                     embed = hikari.Embed(
                         title=title,
-                        description=f":warning: Started restoring backup from {backup_description.readable_name}, please wait.",
+                        description=f"{self._emoji_attention} Started restoring backup from {backup_description.readable_name}, please wait.",
                         color=hikari.colors.Color(self.__color_orange),
                     )
                     await ctx.respond(embed=embed)
@@ -410,13 +410,13 @@ class DiscordBot(BotBase):
                     if game_server.restore_backup(backup_description.filepath):
                         embed = hikari.Embed(
                             title=title,
-                            description=f":white_check_mark: Backup from {backup_description.readable_name} was restored successfully!",
+                            description=f"{self._emoji_ok} Backup from {backup_description.readable_name} was restored successfully!",
                             color=hikari.colors.Color(self.__color_green),
                         )
                     else:
                         embed = hikari.Embed(
                             title=title,
-                            description=f":no_entry: Restoring backup from {backup_description.readable_name} failed, please check bot logs!",
+                            description=f"{self._emoji_bad} Restoring backup from {backup_description.readable_name} failed, please check bot logs!",
                             color=hikari.colors.Color(self.__color_red),
                         )
 
@@ -455,7 +455,7 @@ class DiscordBot(BotBase):
             if user not in self._configuration.privileged_users:
                 embed = hikari.Embed(
                     title=title,
-                    description="Sorry but you don't have rights to call this command! :liar:",
+                    description=f"Sorry but you don't have rights to call this command! {self._emoji_no_access}",
                     color=hikari.colors.Color(self.__color_red),
                 )
 
@@ -485,7 +485,7 @@ class DiscordBot(BotBase):
                 logging.warning("No backups available!")
                 embed = hikari.Embed(
                     title=title,
-                    description=":no_entry: No backups available!",
+                    description=f"{self._emoji_bad} No backups available!",
                     color=hikari.colors.Color(self.__color_red),
                 )
 
@@ -554,7 +554,7 @@ class DiscordBot(BotBase):
             for notify_message in local_notify_messages:
                 embed = hikari.Embed(
                     title=notify_message.title,
-                    description=f":warning: {notify_message.message}",
+                    description=f"{self._emoji_attention} {notify_message.message}",
                     color=hikari.colors.Color(self.__color_orange),
                 )
 
