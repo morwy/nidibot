@@ -7,11 +7,15 @@ from itertools import chain
 from typing import List, Sequence
 
 import nest_asyncio  # type: ignore
-from telegram import (BotCommand, ReplyKeyboardMarkup, ReplyKeyboardRemove,
-                      Update)
+from telegram import BotCommand, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram.constants import ParseMode
-from telegram.ext import (Application, CommandHandler, ContextTypes,
-                          ConversationHandler, MessageHandler)
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    ContextTypes,
+    ConversationHandler,
+    MessageHandler,
+)
 from telegram.helpers import escape_markdown
 
 from nidibot.bots.bot_base import BotBase, BotConfiguration, BotForwardMessage
@@ -34,142 +38,39 @@ class TelegramBot(BotBase):
         )
 
         (
-            self.__STATUS_SERVER,
-            self.__STATUS_END,
+            self.__PROCESS_OPERATION,
+            self.__CONVERSATION_END,
         ) = range(2)
 
-        status_handler = ConversationHandler(
+        common_command_handler = ConversationHandler(
             allow_reentry=True,
-            entry_points=[CommandHandler("status", self.__status)],
+            entry_points=[
+                CommandHandler(
+                    [
+                        "status",
+                        "start",
+                        "stop",
+                        "restart",
+                        "backup_create",
+                        "backup_list",
+                    ],
+                    self.__select_server,
+                )
+            ],
             states={
-                self.__STATUS_SERVER: [
+                self.__PROCESS_OPERATION: [
                     MessageHandler(
                         filters=None,
-                        callback=self.__status_server,
+                        callback=self.__process_operation,
                     )
                 ],
-                self.__STATUS_END: [
+                self.__CONVERSATION_END: [
                     MessageHandler(filters=None, callback=self.__conversation_end)
                 ],
             },
             fallbacks=[MessageHandler(filters=None, callback=self.__conversation_end)],
         )
-        self.__bot.add_handler(status_handler)
-
-        (
-            self.__START_SERVER,
-            self.__START_END,
-        ) = range(2)
-
-        start_handler = ConversationHandler(
-            allow_reentry=True,
-            entry_points=[CommandHandler("start", self.__start)],
-            states={
-                self.__START_SERVER: [
-                    MessageHandler(
-                        filters=None,
-                        callback=self.__start_server,
-                    )
-                ],
-                self.__START_END: [
-                    MessageHandler(filters=None, callback=self.__conversation_end)
-                ],
-            },
-            fallbacks=[MessageHandler(filters=None, callback=self.__conversation_end)],
-        )
-        self.__bot.add_handler(start_handler)
-
-        (
-            self.__STOP_SERVER,
-            self.__STOP_END,
-        ) = range(2)
-
-        stop_handler = ConversationHandler(
-            allow_reentry=True,
-            entry_points=[CommandHandler("stop", self.__stop)],
-            states={
-                self.__STOP_SERVER: [
-                    MessageHandler(
-                        filters=None,
-                        callback=self.__stop_server,
-                    )
-                ],
-                self.__STOP_END: [
-                    MessageHandler(filters=None, callback=self.__conversation_end)
-                ],
-            },
-            fallbacks=[MessageHandler(filters=None, callback=self.__conversation_end)],
-        )
-        self.__bot.add_handler(stop_handler)
-
-        (
-            self.__RESTART_SERVER,
-            self.__RESTART_END,
-        ) = range(2)
-
-        restart_handler = ConversationHandler(
-            allow_reentry=True,
-            entry_points=[CommandHandler("restart", self.__restart)],
-            states={
-                self.__RESTART_SERVER: [
-                    MessageHandler(
-                        filters=None,
-                        callback=self.__restart_server,
-                    )
-                ],
-                self.__RESTART_END: [
-                    MessageHandler(filters=None, callback=self.__conversation_end)
-                ],
-            },
-            fallbacks=[MessageHandler(filters=None, callback=self.__conversation_end)],
-        )
-        self.__bot.add_handler(restart_handler)
-
-        (
-            self.__BACKUP_CREATE_SERVER,
-            self.__BACKUP_CREATE_END,
-        ) = range(2)
-
-        backup_create_handler = ConversationHandler(
-            allow_reentry=True,
-            entry_points=[CommandHandler("backup_create", self.__backup_create)],
-            states={
-                self.__BACKUP_CREATE_SERVER: [
-                    MessageHandler(
-                        filters=None,
-                        callback=self.__backup_create_server,
-                    )
-                ],
-                self.__BACKUP_CREATE_END: [
-                    MessageHandler(filters=None, callback=self.__conversation_end)
-                ],
-            },
-            fallbacks=[MessageHandler(filters=None, callback=self.__conversation_end)],
-        )
-        self.__bot.add_handler(backup_create_handler)
-
-        (
-            self.__BACKUP_LIST_SERVER,
-            self.__BACKUP_LIST_END,
-        ) = range(2)
-
-        backup_list_handler = ConversationHandler(
-            allow_reentry=True,
-            entry_points=[CommandHandler("backup_list", self.__backup_list)],
-            states={
-                self.__BACKUP_LIST_SERVER: [
-                    MessageHandler(
-                        filters=None,
-                        callback=self.__backup_list_server,
-                    )
-                ],
-                self.__BACKUP_LIST_END: [
-                    MessageHandler(filters=None, callback=self.__conversation_end)
-                ],
-            },
-            fallbacks=[MessageHandler(filters=None, callback=self.__conversation_end)],
-        )
-        self.__bot.add_handler(backup_list_handler)
+        self.__bot.add_handler(common_command_handler)
 
         (
             self.__BACKUP_RESTORE_SERVER,
@@ -243,35 +144,47 @@ class TelegramBot(BotBase):
         ]
         await application.bot.set_my_commands(commands)
 
-    async def __status(self, update: Update, _: ContextTypes.DEFAULT_TYPE) -> int:
+    async def __select_server(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> int:
         if update.effective_user is None or update.effective_user.username is None:
             logging.critical("No username in incoming message!")
-            return self.__STATUS_END
+            return self.__CONVERSATION_END
 
         username = update.effective_user.username
 
         if update.message is None or update.message.text is None:
             logging.critical("No chat_id in incoming message!")
-            return self.__STATUS_END
+            return self.__CONVERSATION_END
 
-        if update.effective_message is None or update.effective_message.chat_id is None:
+        if (
+            update.effective_message is None
+            or update.effective_message.chat_id is None
+            or update.effective_message.text is None
+        ):
             logging.critical("No chat_id in incoming message!")
-            return self.__STATUS_END
+            return self.__CONVERSATION_END
 
         chat_id = update.effective_message.chat_id
+        message_text = update.effective_message.text
+        command = message_text.replace("/", "")[: message_text.find("@") - 1]
 
         if (
             len(self._configuration.allowed_channels) > 0
             and str(chat_id) not in self._configuration.allowed_channels
         ):
             logging.error(
-                "Called 'status' by '%s' in not allowed channel '%s'.",
+                "Called '%s' by '%s' in not allowed channel '%s'.",
+                command,
                 username,
                 chat_id,
             )
-            return self.__STATUS_END
+            return self.__CONVERSATION_END
 
-        logging.debug("Called 'status' by '%s'.", username)
+        logging.debug("Called '%s' by '%s'.", command, username)
+
+        if context.user_data is not None:
+            context.user_data["command"] = command
 
         reply_keyboard = [[]]  # type: ignore
         for game_server in self._game_server_names:
@@ -287,486 +200,179 @@ class TelegramBot(BotBase):
             ),
         )
 
-        return self.__STATUS_SERVER
+        return self.__PROCESS_OPERATION
 
-    async def __status_server(
+    async def __process_operation(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
     ) -> int:
         if update.message is None or update.message.from_user is None:
             logging.critical("No username in incoming message!")
-            return self.__STATUS_END
+            return self.__CONVERSATION_END
 
         username = update.message.from_user.username
 
         if update.message is None or update.message.text is None:
             logging.critical("No text in incoming message!")
-            return self.__STATUS_END
+            return self.__CONVERSATION_END
 
         server_name = update.message.text
 
+        command = ""
         if context.user_data is not None:
-            context.user_data["game_server"] = server_name
+            command = context.user_data["command"]
+
+        if not command:
+            return self.__CONVERSATION_END
 
         if update.effective_message is None or update.effective_message.chat_id is None:
             logging.critical("No chat_id in incoming message!")
-            return self.__STATUS_END
+            return self.__CONVERSATION_END
 
         chat_id = update.effective_message.chat_id
 
-        logging.debug("'%s' selected server '%s'.", username, server_name)
+        logging.debug(
+            "'%s' selected server '%s' for command '%s'.",
+            username,
+            server_name,
+            command,
+        )
 
         game_server = next(
             (x for x in self._game_servers if x.name() == server_name), None
         )
         if game_server is None:
-            return self.__STATUS_END
+            return self.__CONVERSATION_END
 
-        server_status = game_server.status()
+        #
+        # Process un-privileged commands.
+        #
+        if command == "status":
+            server_status = game_server.status()
 
-        if server_status.status == "online":
-            status_emoji = self._emoji_ok
-        elif server_status.status == "offline":
-            status_emoji = self._emoji_bad
-        elif server_status.status == "restarting":
-            status_emoji = self._emoji_attention
-        else:
-            status_emoji = self._emoji_unknown
+            if server_status.status == "online":
+                status_emoji = self._emoji_ok
+            elif server_status.status == "offline":
+                status_emoji = self._emoji_bad
+            elif server_status.status == "restarting":
+                status_emoji = self._emoji_attention
+            else:
+                status_emoji = self._emoji_unknown
 
-        if server_status.update_available:
-            update_emoji = self._emoji_attention
-            update_text = "yes"
-        else:
-            update_emoji = self._emoji_ok
-            update_text = "no"
+            if server_status.update_available:
+                update_emoji = self._emoji_attention
+                update_text = "yes"
+            else:
+                update_emoji = self._emoji_ok
+                update_text = "no"
 
-        date_time = server_status.available_until.split(" ")
-        date_parts = date_time[0].split("-")
-        d0 = date(datetime.now().year, datetime.now().month, datetime.now().day)
-        d1 = date(int(date_parts[0]), int(date_parts[1]), int(date_parts[2]))
-        delta = d1 - d0
-        days_left = f"({delta.days} days left)"
+            date_time = server_status.available_until.split(" ")
+            date_parts = date_time[0].split("-")
+            d0 = date(datetime.now().year, datetime.now().month, datetime.now().day)
+            d1 = date(int(date_parts[0]), int(date_parts[1]), int(date_parts[2]))
+            delta = d1 - d0
+            days_left = f"({delta.days} days left)"
 
-        server_name = self._get_response_title(game_server=game_server)
-        response_text = f"__*{escape_markdown(server_name, version=2)}*__\n\n"
-        response_text += (
-            f"*Address:* {escape_markdown(server_status.address, version=2)}\n"
-        )
-        response_text += f"*Status:* {status_emoji} {server_status.status}\n"
-        response_text += f"*Players:* {server_status.players_connected} / {server_status.players_limit}\n"
-        response_text += f"*Available until:* {escape_markdown(server_status.available_until, version=2)} {escape_markdown(days_left, version=2)}\n"
-        response_text += f"*Update available:* {update_emoji} {update_text}"
-
-        await context.bot.send_message(
-            chat_id,
-            text=response_text,
-            parse_mode=ParseMode.MARKDOWN_V2,
-            reply_markup=ReplyKeyboardRemove(),
-        )
-
-        return self.__STATUS_END
-
-    async def __start(self, update: Update, _: ContextTypes.DEFAULT_TYPE) -> int:
-        if update.effective_user is None or update.effective_user.username is None:
-            logging.critical("No username in incoming message!")
-            return self.__START_END
-
-        username = update.effective_user.username
-
-        if update.message is None or update.message.text is None:
-            logging.critical("No chat_id in incoming message!")
-            return self.__START_END
-
-        if update.effective_message is None or update.effective_message.chat_id is None:
-            logging.critical("No chat_id in incoming message!")
-            return self.__START_END
-
-        chat_id = update.effective_message.chat_id
-
-        if (
-            len(self._configuration.allowed_channels) > 0
-            and str(chat_id) not in self._configuration.allowed_channels
-        ):
-            logging.error(
-                "Called 'start' by '%s' in not allowed channel '%s'.",
-                username,
-                chat_id,
+            server_name = self._get_response_title(game_server=game_server)
+            response_text = f"__*{escape_markdown(server_name, version=2)}*__\n\n"
+            response_text += (
+                f"*Address:* {escape_markdown(server_status.address, version=2)}\n"
             )
-            return self.__START_END
+            response_text += f"*Status:* {status_emoji} {server_status.status}\n"
+            response_text += f"*Players:* {server_status.players_connected} / {server_status.players_limit}\n"
+            response_text += f"*Available until:* {escape_markdown(server_status.available_until, version=2)} {escape_markdown(days_left, version=2)}\n"
+            response_text += f"*Update available:* {update_emoji} {update_text}"
 
-        logging.debug("Called 'start' by '%s'.", username)
-
-        if username not in self._configuration.privileged_users:
-            await update.message.reply_text(
-                f"Sorry but you don't have rights to call this command\\! {self._emoji_no_access}",
-                parse_mode=ParseMode.MARKDOWN_V2,
-                reply_markup=ReplyKeyboardRemove(),
-            )
-            return self.__START_END
-
-        reply_keyboard = [[]]  # type: ignore
-        for game_server in self._game_server_names:
-            sub_keyboard = [[game_server]]
-            reply_keyboard = self.__concatenate_sequences(reply_keyboard, sub_keyboard)  # type: ignore
-
-        await update.message.reply_text(
-            "Please select server:",
-            reply_markup=ReplyKeyboardMarkup(
-                reply_keyboard,
-                one_time_keyboard=True,
-                resize_keyboard=True,
-            ),
-        )
-
-        return self.__START_SERVER
-
-    async def __start_server(
-        self, update: Update, context: ContextTypes.DEFAULT_TYPE
-    ) -> int:
-        if update.message is None or update.message.from_user is None:
-            logging.critical("No username in incoming message!")
-            return self.__START_END
-
-        username = update.message.from_user.username
-
-        if update.message is None or update.message.text is None:
-            logging.critical("No text in incoming message!")
-            return self.__START_END
-
-        server_name = update.message.text
-
-        if context.user_data is not None:
-            context.user_data["game_server"] = server_name
-
-        if update.effective_message is None or update.effective_message.chat_id is None:
-            logging.critical("No chat_id in incoming message!")
-            return self.__START_END
-
-        chat_id = update.effective_message.chat_id
-
-        logging.debug("'%s' selected server '%s'.", username, server_name)
-
-        game_server = next(
-            (x for x in self._game_servers if x.name() == server_name), None
-        )
-        if game_server is None:
-            return self.__START_END
-
-        await context.bot.send_message(
-            chat_id,
-            text=f"{self._emoji_attention} Starting server\\!",
-            parse_mode=ParseMode.MARKDOWN_V2,
-            reply_markup=ReplyKeyboardRemove(),
-        )
-
-        game_server.start()
-
-        return self.__START_END
-
-    async def __stop(self, update: Update, _: ContextTypes.DEFAULT_TYPE) -> int:
-        if update.effective_user is None or update.effective_user.username is None:
-            logging.critical("No username in incoming message!")
-            return self.__STOP_END
-
-        username = update.effective_user.username
-
-        if update.message is None or update.message.text is None:
-            logging.critical("No chat_id in incoming message!")
-            return self.__STOP_END
-
-        if update.effective_message is None or update.effective_message.chat_id is None:
-            logging.critical("No chat_id in incoming message!")
-            return self.__STOP_END
-
-        chat_id = update.effective_message.chat_id
-
-        if (
-            len(self._configuration.allowed_channels) > 0
-            and str(chat_id) not in self._configuration.allowed_channels
-        ):
-            logging.error(
-                "Called 'stop' by '%s' in not allowed channel '%s'.",
-                username,
-                chat_id,
-            )
-            return self.__STOP_END
-
-        logging.debug("Called 'stop' by '%s'.", username)
-
-        if username not in self._configuration.privileged_users:
-            await update.message.reply_text(
-                f"Sorry but you don't have rights to call this command\\! {self._emoji_no_access}",
-                parse_mode=ParseMode.MARKDOWN_V2,
-                reply_markup=ReplyKeyboardRemove(),
-            )
-            return self.__STOP_END
-
-        reply_keyboard = [[]]  # type: ignore
-        for game_server in self._game_server_names:
-            sub_keyboard = [[game_server]]
-            reply_keyboard = self.__concatenate_sequences(reply_keyboard, sub_keyboard)  # type: ignore
-
-        await update.message.reply_text(
-            "Please select server:",
-            reply_markup=ReplyKeyboardMarkup(
-                reply_keyboard,
-                one_time_keyboard=True,
-                resize_keyboard=True,
-            ),
-        )
-
-        return self.__STOP_SERVER
-
-    async def __stop_server(
-        self, update: Update, context: ContextTypes.DEFAULT_TYPE
-    ) -> int:
-        if update.message is None or update.message.from_user is None:
-            logging.critical("No username in incoming message!")
-            return self.__STOP_END
-
-        username = update.message.from_user.username
-
-        if update.message is None or update.message.text is None:
-            logging.critical("No text in incoming message!")
-            return self.__STOP_END
-
-        server_name = update.message.text
-
-        if context.user_data is not None:
-            context.user_data["game_server"] = server_name
-
-        if update.effective_message is None or update.effective_message.chat_id is None:
-            logging.critical("No chat_id in incoming message!")
-            return self.__STOP_END
-
-        chat_id = update.effective_message.chat_id
-
-        logging.debug("'%s' selected server '%s'.", username, server_name)
-
-        game_server = next(
-            (x for x in self._game_servers if x.name() == server_name), None
-        )
-        if game_server is None:
-            return self.__STOP_END
-
-        await context.bot.send_message(
-            chat_id,
-            text=f"{self._emoji_attention} Stopping server\\!",
-            parse_mode=ParseMode.MARKDOWN_V2,
-            reply_markup=ReplyKeyboardRemove(),
-        )
-
-        game_server.stop()
-
-        return self.__STOP_END
-
-    async def __restart(self, update: Update, _: ContextTypes.DEFAULT_TYPE) -> int:
-        if update.effective_user is None or update.effective_user.username is None:
-            logging.critical("No username in incoming message!")
-            return self.__RESTART_END
-
-        username = update.effective_user.username
-
-        if update.message is None or update.message.text is None:
-            logging.critical("No chat_id in incoming message!")
-            return self.__RESTART_END
-
-        if update.effective_message is None or update.effective_message.chat_id is None:
-            logging.critical("No chat_id in incoming message!")
-            return self.__RESTART_END
-
-        chat_id = update.effective_message.chat_id
-
-        if (
-            len(self._configuration.allowed_channels) > 0
-            and str(chat_id) not in self._configuration.allowed_channels
-        ):
-            logging.error(
-                "Called 'restart' by '%s' in not allowed channel '%s'.",
-                username,
-                chat_id,
-            )
-            return self.__RESTART_END
-
-        logging.debug("Called 'restart' by '%s'.", username)
-
-        if username not in self._configuration.privileged_users:
-            await update.message.reply_text(
-                f"Sorry but you don't have rights to call this command\\! {self._emoji_no_access}",
-                parse_mode=ParseMode.MARKDOWN_V2,
-                reply_markup=ReplyKeyboardRemove(),
-            )
-            return self.__RESTART_END
-
-        reply_keyboard = [[]]  # type: ignore
-        for game_server in self._game_server_names:
-            sub_keyboard = [[game_server]]
-            reply_keyboard = self.__concatenate_sequences(reply_keyboard, sub_keyboard)  # type: ignore
-
-        await update.message.reply_text(
-            "Please select server:",
-            reply_markup=ReplyKeyboardMarkup(
-                reply_keyboard,
-                one_time_keyboard=True,
-                resize_keyboard=True,
-            ),
-        )
-
-        return self.__RESTART_SERVER
-
-    async def __restart_server(
-        self, update: Update, context: ContextTypes.DEFAULT_TYPE
-    ) -> int:
-        if update.message is None or update.message.from_user is None:
-            logging.critical("No username in incoming message!")
-            return self.__RESTART_END
-
-        username = update.message.from_user.username
-
-        if update.message is None or update.message.text is None:
-            logging.critical("No text in incoming message!")
-            return self.__RESTART_END
-
-        server_name = update.message.text
-
-        if context.user_data is not None:
-            context.user_data["game_server"] = server_name
-
-        if update.effective_message is None or update.effective_message.chat_id is None:
-            logging.critical("No chat_id in incoming message!")
-            return self.__RESTART_END
-
-        chat_id = update.effective_message.chat_id
-
-        logging.debug("'%s' selected server '%s'.", username, server_name)
-
-        game_server = next(
-            (x for x in self._game_servers if x.name() == server_name), None
-        )
-        if game_server is None:
-            return self.__RESTART_END
-
-        await context.bot.send_message(
-            chat_id,
-            text=f"{self._emoji_attention} Restarting server\\!",
-            parse_mode=ParseMode.MARKDOWN_V2,
-            reply_markup=ReplyKeyboardRemove(),
-        )
-
-        game_server.restart()
-
-        return self.__RESTART_END
-
-    async def __backup_create(
-        self, update: Update, _: ContextTypes.DEFAULT_TYPE
-    ) -> int:
-        if update.effective_user is None or update.effective_user.username is None:
-            logging.critical("No username in incoming message!")
-            return self.__BACKUP_CREATE_END
-
-        username = update.effective_user.username
-
-        if update.message is None or update.message.text is None:
-            logging.critical("No chat_id in incoming message!")
-            return self.__BACKUP_CREATE_END
-
-        if update.effective_message is None or update.effective_message.chat_id is None:
-            logging.critical("No chat_id in incoming message!")
-            return self.__BACKUP_CREATE_END
-
-        chat_id = update.effective_message.chat_id
-
-        if (
-            len(self._configuration.allowed_channels) > 0
-            and str(chat_id) not in self._configuration.allowed_channels
-        ):
-            logging.error(
-                "Called 'backup_create' by '%s' in not allowed channel '%s'.",
-                username,
-                chat_id,
-            )
-            return self.__BACKUP_CREATE_END
-
-        logging.debug("Called 'backup_create' by '%s'.", username)
-
-        if username not in self._configuration.privileged_users:
-            await update.message.reply_text(
-                f"Sorry but you don't have rights to call this command\\! {self._emoji_no_access}",
-                parse_mode=ParseMode.MARKDOWN_V2,
-                reply_markup=ReplyKeyboardRemove(),
-            )
-            return self.__BACKUP_CREATE_END
-
-        reply_keyboard = [[]]  # type: ignore
-        for game_server in self._game_server_names:
-            sub_keyboard = [[game_server]]
-            reply_keyboard = self.__concatenate_sequences(reply_keyboard, sub_keyboard)  # type: ignore
-
-        await update.message.reply_text(
-            "Please select server:",
-            reply_markup=ReplyKeyboardMarkup(
-                reply_keyboard,
-                one_time_keyboard=True,
-                resize_keyboard=True,
-            ),
-        )
-
-        return self.__BACKUP_CREATE_SERVER
-
-    async def __backup_create_server(
-        self, update: Update, context: ContextTypes.DEFAULT_TYPE
-    ) -> int:
-        if update.message is None or update.message.from_user is None:
-            logging.critical("No username in incoming message!")
-            return self.__BACKUP_CREATE_END
-
-        username = update.message.from_user.username
-
-        if update.message is None or update.message.text is None:
-            logging.critical("No text in incoming message!")
-            return self.__BACKUP_CREATE_END
-
-        server_name = update.message.text
-
-        if context.user_data is not None:
-            context.user_data["game_server"] = server_name
-
-        if update.effective_message is None or update.effective_message.chat_id is None:
-            logging.critical("No chat_id in incoming message!")
-            return self.__BACKUP_CREATE_END
-
-        chat_id = update.effective_message.chat_id
-
-        logging.debug("'%s' selected server '%s'.", username, server_name)
-
-        game_server = next(
-            (x for x in self._game_servers if x.name() == server_name), None
-        )
-        if game_server is None:
-            return self.__BACKUP_CREATE_END
-
-        await context.bot.send_message(
-            chat_id,
-            text=f"{self._emoji_attention} Started creating backup of the server\\, please wait\\.",
-            parse_mode=ParseMode.MARKDOWN_V2,
-            reply_markup=ReplyKeyboardRemove(),
-        )
-
-        if game_server.create_backup():
             await context.bot.send_message(
                 chat_id,
-                text=f"{self._emoji_ok} Backup was created successfully\\!",
-                parse_mode=ParseMode.MARKDOWN_V2,
-                reply_markup=ReplyKeyboardRemove(),
-            )
-        else:
-            await context.bot.send_message(
-                chat_id,
-                text=f"{self._emoji_bad} Backup creation failed\\, please check bot logs\\!",
+                text=response_text,
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
 
-        return self.__BACKUP_CREATE_END
+            return self.__CONVERSATION_END
+
+        if command == "backup_list":
+            self._backups[server_name] = game_server.list_backups()
+
+            backup_sum_message = "Available backups:\n"
+            for backup in self._backups[server_name]:
+                backup_sum_message += (
+                    f"\\- {escape_markdown(backup.readable_name, version=2)}\n"
+                )
+
+            await context.bot.send_message(
+                chat_id,
+                text=backup_sum_message,
+                parse_mode=ParseMode.MARKDOWN_V2,
+                reply_markup=ReplyKeyboardRemove(),
+            )
+            return self.__CONVERSATION_END
+
+        #
+        # Process privileged commands.
+        #
+        if username not in self._configuration.privileged_users:
+            await update.message.reply_text(
+                f"Sorry but you don't have rights to call this command\\! {self._emoji_no_access}",
+                parse_mode=ParseMode.MARKDOWN_V2,
+                reply_markup=ReplyKeyboardRemove(),
+            )
+            return self.__CONVERSATION_END
+
+        if command == "start":
+            await context.bot.send_message(
+                chat_id,
+                text=f"{self._emoji_attention} Starting server\\!",
+                parse_mode=ParseMode.MARKDOWN_V2,
+                reply_markup=ReplyKeyboardRemove(),
+            )
+
+            game_server.start()
+
+        elif command == "stop":
+            await context.bot.send_message(
+                chat_id,
+                text=f"{self._emoji_attention} Stopping server\\!",
+                parse_mode=ParseMode.MARKDOWN_V2,
+                reply_markup=ReplyKeyboardRemove(),
+            )
+
+            game_server.stop()
+
+        elif command == "restart":
+            await context.bot.send_message(
+                chat_id,
+                text=f"{self._emoji_attention} Restarting server\\!",
+                parse_mode=ParseMode.MARKDOWN_V2,
+                reply_markup=ReplyKeyboardRemove(),
+            )
+
+            game_server.restart()
+
+        elif command == "backup_create":
+            await context.bot.send_message(
+                chat_id,
+                text=f"{self._emoji_attention} Started creating backup\\, please wait\\.",
+                parse_mode=ParseMode.MARKDOWN_V2,
+                reply_markup=ReplyKeyboardRemove(),
+            )
+
+            if game_server.create_backup():
+                await context.bot.send_message(
+                    chat_id,
+                    text=f"{self._emoji_ok} Backup was created successfully\\!",
+                    parse_mode=ParseMode.MARKDOWN_V2,
+                    reply_markup=ReplyKeyboardRemove(),
+                )
+            else:
+                await context.bot.send_message(
+                    chat_id,
+                    text=f"{self._emoji_bad} Backup creation failed\\, please check bot logs\\!",
+                    parse_mode=ParseMode.MARKDOWN_V2,
+                    reply_markup=ReplyKeyboardRemove(),
+                )
+
+        return self.__CONVERSATION_END
 
     async def __backup_restore(
         self, update: Update, _: ContextTypes.DEFAULT_TYPE
@@ -945,109 +551,6 @@ class TelegramBot(BotBase):
         self, _1: Update, _2: ContextTypes.DEFAULT_TYPE
     ) -> int:
         return ConversationHandler.END
-
-    async def __backup_list(self, update: Update, _: ContextTypes.DEFAULT_TYPE) -> int:
-        if update.effective_user is None or update.effective_user.username is None:
-            logging.critical("No username in incoming message!")
-            return self.__BACKUP_LIST_END
-
-        username = update.effective_user.username
-
-        if update.message is None or update.message.text is None:
-            logging.critical("No chat_id in incoming message!")
-            return self.__BACKUP_LIST_END
-
-        if update.effective_message is None or update.effective_message.chat_id is None:
-            logging.critical("No chat_id in incoming message!")
-            return self.__BACKUP_LIST_END
-
-        chat_id = update.effective_message.chat_id
-
-        if (
-            len(self._configuration.allowed_channels) > 0
-            and str(chat_id) not in self._configuration.allowed_channels
-        ):
-            logging.error(
-                "Called 'backup_list' by '%s' in not allowed channel '%s'.",
-                username,
-                chat_id,
-            )
-            return self.__BACKUP_CREATE_END
-
-        logging.debug("Called 'backup_list' by '%s'.", username)
-
-        if username not in self._configuration.privileged_users:
-            await update.message.reply_text(
-                f"Sorry but you don't have rights to call this command\\! {self._emoji_no_access}",
-                parse_mode=ParseMode.MARKDOWN_V2,
-                reply_markup=ReplyKeyboardRemove(),
-            )
-            return self.__BACKUP_CREATE_END
-
-        reply_keyboard = [[]]  # type: ignore
-        for game_server in self._game_server_names:
-            sub_keyboard = [[game_server]]
-            reply_keyboard = self.__concatenate_sequences(reply_keyboard, sub_keyboard)  # type: ignore
-
-        await update.message.reply_text(
-            "Please select server:",
-            reply_markup=ReplyKeyboardMarkup(
-                reply_keyboard,
-                one_time_keyboard=True,
-                resize_keyboard=True,
-            ),
-        )
-
-        return self.__BACKUP_LIST_SERVER
-
-    async def __backup_list_server(
-        self, update: Update, context: ContextTypes.DEFAULT_TYPE
-    ) -> int:
-        if update.message is None or update.message.from_user is None:
-            logging.critical("No username in incoming message!")
-            return self.__BACKUP_LIST_END
-
-        username = update.message.from_user.username
-
-        if update.message is None or update.message.text is None:
-            logging.critical("No text in incoming message!")
-            return self.__BACKUP_LIST_END
-
-        server_name = update.message.text
-
-        if context.user_data is not None:
-            context.user_data["game_server"] = server_name
-
-        if update.effective_message is None or update.effective_message.chat_id is None:
-            logging.critical("No chat_id in incoming message!")
-            return self.__BACKUP_LIST_END
-
-        chat_id = update.effective_message.chat_id
-
-        logging.debug("'%s' selected server '%s'.", username, server_name)
-
-        game_server = next(
-            (x for x in self._game_servers if x.name() == server_name), None
-        )
-        if game_server is None:
-            return self.__BACKUP_LIST_END
-
-        self._backups[server_name] = game_server.list_backups()
-
-        backup_sum_message = "Available backups:\n"
-        for backup in self._backups[server_name]:
-            backup_sum_message += (
-                f"\\- {escape_markdown(backup.readable_name, version=2)}\n"
-            )
-
-        await context.bot.send_message(
-            chat_id,
-            text=backup_sum_message,
-            parse_mode=ParseMode.MARKDOWN_V2,
-            reply_markup=ReplyKeyboardRemove(),
-        )
-
-        return self.__BACKUP_LIST_END
 
     async def __notify_loop(self, context: ContextTypes.DEFAULT_TYPE) -> None:
         local_notify_messages: List[BotForwardMessage] = []
