@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2024-03-04
+
+### 🐛 Bug Fixes
+
+- *(telegram-bot)* Fixed anomalous slashes in strings.
+- *(ci)* Corrected creation of GitHub release entry text.
+
+### 🚜 Refactor
+
+- *(bots)* Moved emojis to BotBase class.
+- *(telegram-bot)* Unified common commands under the same functionality.
+- *(telegram-bot)* Unified conversation enumeration.
+
+### ⚙️ Miscellaneous Tasks
+
+- *(discord-bot)* Added missing imports.
+
 ## [1.1.9] - 2024-03-04
 
 ### 🐛 Bug Fixes
