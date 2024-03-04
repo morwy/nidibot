@@ -67,10 +67,12 @@ class TelegramBot(BotBase):
                     )
                 ],
                 self.__BACKUP_RESTORE_CANCEL: [
-                    CommandHandler("cancel", self.__backup_restore_cancel)
+                    MessageHandler(filters=None, callback=self.__backup_restore_cancel)
                 ],
             },
-            fallbacks=[CommandHandler("cancel", self.__backup_restore_cancel)],
+            fallbacks=[
+                MessageHandler(filters=None, callback=self.__backup_restore_cancel)
+            ],
         )
         self.__bot.add_handler(conversation_handler)
 
