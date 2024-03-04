@@ -401,7 +401,7 @@ class TelegramBot(BotBase):
 
         if username not in self._configuration.privileged_users:
             await update.message.reply_text(
-                "Sorry but you don't have rights to call this command\! \u1F925",
+                "Sorry but you don't have rights to call this command\\! \u1F925",
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
@@ -457,7 +457,7 @@ class TelegramBot(BotBase):
 
         await context.bot.send_message(
             chat_id,
-            text="\u26A0 Starting server\!",
+            text="\u26A0 Starting server\\!",
             parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=ReplyKeyboardRemove(),
         )
@@ -498,7 +498,7 @@ class TelegramBot(BotBase):
 
         if username not in self._configuration.privileged_users:
             await update.message.reply_text(
-                "Sorry but you don't have rights to call this command\! \u1F925",
+                "Sorry but you don't have rights to call this command\\! \u1F925",
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
@@ -554,7 +554,7 @@ class TelegramBot(BotBase):
 
         await context.bot.send_message(
             chat_id,
-            text="\u26A0 Stopping server\!",
+            text="\u26A0 Stopping server\\!",
             parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=ReplyKeyboardRemove(),
         )
@@ -595,7 +595,7 @@ class TelegramBot(BotBase):
 
         if username not in self._configuration.privileged_users:
             await update.message.reply_text(
-                "Sorry but you don't have rights to call this command\! \u1F925",
+                "Sorry but you don't have rights to call this command\\! \u1F925",
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
@@ -651,7 +651,7 @@ class TelegramBot(BotBase):
 
         await context.bot.send_message(
             chat_id,
-            text="\u26A0 Restarting server\!",
+            text="\u26A0 Restarting server\\!",
             parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=ReplyKeyboardRemove(),
         )
@@ -694,7 +694,7 @@ class TelegramBot(BotBase):
 
         if username not in self._configuration.privileged_users:
             await update.message.reply_text(
-                "Sorry but you don't have rights to call this command\! \u1F925",
+                "Sorry but you don't have rights to call this command\\! \u1F925",
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
@@ -750,7 +750,7 @@ class TelegramBot(BotBase):
 
         await context.bot.send_message(
             chat_id,
-            text="\u26A0 Started creating backup of the server\, please wait\.",
+            text="\u26A0 Started creating backup of the server\\, please wait\\.",
             parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=ReplyKeyboardRemove(),
         )
@@ -758,14 +758,14 @@ class TelegramBot(BotBase):
         if game_server.create_backup():
             await context.bot.send_message(
                 chat_id,
-                text="\u2705 Backup was created successfully\!",
+                text="\u2705 Backup was created successfully\\!",
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
         else:
             await context.bot.send_message(
                 chat_id,
-                text="\u26D4 Backup creation failed\, please check bot logs\!",
+                text="\u26D4 Backup creation failed\\, please check bot logs\\!",
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
@@ -803,6 +803,14 @@ class TelegramBot(BotBase):
             return self.__BACKUP_RESTORE_END
 
         logging.debug("Called 'backup_restore' by '%s'.", username)
+
+        if username not in self._configuration.privileged_users:
+            await update.message.reply_text(
+                "Sorry but you don't have rights to call this command\\! \u1F925",
+                parse_mode=ParseMode.MARKDOWN_V2,
+                reply_markup=ReplyKeyboardRemove(),
+            )
+            return self.__BACKUP_RESTORE_END
 
         reply_keyboard = [[]]  # type: ignore
         for game_server in self._game_server_names:
@@ -914,20 +922,20 @@ class TelegramBot(BotBase):
             backup_description.readable_name, version=2
         )
         await update.message.reply_text(
-            text=f"\u26A0 Started restoring backup from {escaped_backup_name}\, please wait\.",
+            text=f"\u26A0 Started restoring backup from {escaped_backup_name}\\, please wait\\.",
             parse_mode=ParseMode.MARKDOWN_V2,
             reply_markup=ReplyKeyboardRemove(),
         )
 
         if game_server.restore_backup(backup_description.filepath):
             await update.message.reply_text(
-                text=f"\u2705 Backup from {escaped_backup_name} was restored successfully\!",
+                text=f"\u2705 Backup from {escaped_backup_name} was restored successfully\\!",
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
         else:
             await update.message.reply_text(
-                text=f"\u26D4 Restoring backup from {escaped_backup_name} failed\, please check bot logs\!",
+                text=f"\u26D4 Restoring backup from {escaped_backup_name} failed\\, please check bot logs\\!",
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
@@ -971,7 +979,7 @@ class TelegramBot(BotBase):
 
         if username not in self._configuration.privileged_users:
             await update.message.reply_text(
-                "Sorry but you don't have rights to call this command\! \u1F925",
+                "Sorry but you don't have rights to call this command\\! \u1F925",
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=ReplyKeyboardRemove(),
             )
@@ -1030,7 +1038,7 @@ class TelegramBot(BotBase):
         backup_sum_message = "Available backups:\n"
         for backup in self._backups[server_name]:
             backup_sum_message += (
-                f"\- {escape_markdown(backup.readable_name, version=2)}\n"
+                f"\\- {escape_markdown(backup.readable_name, version=2)}\n"
             )
 
         await context.bot.send_message(
