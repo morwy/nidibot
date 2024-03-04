@@ -6,6 +6,8 @@ from datetime import date, datetime
 from typing import List
 
 import hikari
+import hikari.colors
+import hikari.errors
 import lightbulb
 from hikari.api import MessageActionRowBuilder
 from lightbulb.ext import tasks
