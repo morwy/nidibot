@@ -2,7 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
-## [unreleased]
+## [1.1.9] - 2024-03-04
+
+### 🐛 Bug Fixes
+
+- *(ci)* Corrected way of generating CHANGELOG.md and GitHub release entry text.
+- *(telegram-bot)* Resizing reply keyboard during backup_restore.
+
+### 🚜 Refactor
+
+- *(telegram-bot)* Switched fallback to MessageHandler and not CommandHandler.
+- *(telegram-bot)* Changed status command handling to ConversationHandler.
+- *(telegram-bot)* Changed start command handling to ConversationHandler.
+- *(telegram-bot)* Changed stop command handling to ConversationHandler.
+- *(telegram-bot)* Changed restart command handling to ConversationHandler.
+- *(telegram-bot)* Changed backup_create command handling to ConversationHandler.
+- *(telegram-bot)* Changed backup_list command handling to ConversationHandler.
+
+### Build
+
+- *(deps)* Bump actions/setup-python from 3 to 5
+- *(deps)* Bump actions/checkout from 3 to 4
+
+## [1.1.8] - 2024-03-02
 
 ### 🚀 Features
 
