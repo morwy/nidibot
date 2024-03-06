@@ -5,7 +5,7 @@ import os
 import signal
 import sys
 
-from nidibot.nidibot import Nidibot
+from nidibot import Nidibot
 
 
 def shutdown_signal_handler(_1, _2):

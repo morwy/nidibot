@@ -119,7 +119,7 @@ pip install nidibot --upgrade
 
 ```bash
 # Ubuntu/Linux only.
-python3 -c 'from nidibot.nidibot import Nidibot; Nidibot.initialize_folder()'
+python3 -c 'from nidibot import Nidibot; Nidibot.initialize_folder()'
 ```
 
 5. Following files should appear.
