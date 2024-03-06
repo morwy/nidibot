@@ -16,7 +16,6 @@ from dacite import from_dict
 
 from nidibot.bots.bot_base import BotBase, BotConfiguration
 from nidibot.bots.bot_factory import BotFactory
-from nidibot.bots.telegram_bot import TelegramBot
 from nidibot.server_provider.game_server import GameServer
 from nidibot.server_provider.server_provider_base import (
     ServerProviderBase,
