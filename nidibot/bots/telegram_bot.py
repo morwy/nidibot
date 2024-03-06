@@ -1,5 +1,13 @@
 #!/usr/bin/env python
 
+"""
+nidibot.bots.telegram_bot
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Components for managing Telegram bot.
+
+"""
+
 import asyncio
 import logging
 from datetime import date, datetime
@@ -23,6 +31,10 @@ from nidibot.server_provider.game_server import GameServer
 
 
 class TelegramBot(BotBase):
+    """
+    A class for managing Telegram bot.
+    """
+
     def __init__(self, configuration: BotConfiguration, game_servers: List[GameServer]):
         super().__init__(configuration=configuration, game_servers=game_servers)
 

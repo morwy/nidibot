@@ -1,5 +1,13 @@
 #!/usr/bin/env python
 
+"""
+nidibot.bots.discord_bot
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Components for managing Discord bot.
+
+"""
+
 import logging
 import typing
 from datetime import date, datetime
@@ -22,6 +30,10 @@ from nidibot.server_provider.game_server import GameServer
 
 
 class DiscordBot(BotBase):
+    """
+    A class for managing Discord bot.
+    """
+
     def __init__(self, configuration: BotConfiguration, game_servers: List[GameServer]):
         super().__init__(configuration=configuration, game_servers=game_servers)
 
