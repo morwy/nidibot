@@ -1,5 +1,13 @@
 #!/usr/bin/env python
 
+"""
+nidibot
+~~~~~~~~~~
+
+Main class for nidibot package.
+
+"""
+
 import json
 import logging
 import os
@@ -26,18 +34,29 @@ from nidibot.server_provider.server_provider_factory import ServerProviderFactor
 
 @dataclass
 class GeneralConfiguration:
+    """Class describing general parameters of nidibot configuration."""
+
     backups_folder_path: str = ""
+    """The directory path in which all backups will be stored. Can be both relative or absolute."""
+
     logs_folder_path: str = ""
+    """The directory path in which logs will be stored. Can be both relative or absolute."""
 
 
 @dataclass
 class NidibotConfiguration:
+    """Class describing all nested parameters of nidibot configuration."""
+
     general: GeneralConfiguration = field(default_factory=GeneralConfiguration)
     bots: List[BotConfiguration] = field(default_factory=list)
     server_providers: List[ServerProviderConfiguration] = field(default_factory=list)
 
 
 class Nidibot:
+    """
+    Main class for managing all configured bots and game server providers.
+    """
+
     def __init__(self, working_folder_path: str):
         if not working_folder_path:
             raise ValueError("Working directory value is required for nidibot start!")
@@ -94,9 +113,7 @@ class Nidibot:
         return configuration
 
     def __initialize_logging(self) -> None:
-        #
         # Enable daily logging both to file and stdout.
-        #
         log_directory = os.path.join(self.__working_folder_path, "logs")
         if os.path.isabs(self.__configuration.general.logs_folder_path):
             log_directory = self.__configuration.general.logs_folder_path
@@ -125,6 +142,10 @@ class Nidibot:
             bot.notify(title, message)
 
     def start(self) -> None:
+        """
+        Starts all configured bots, each in independent thread.
+        Waits until all bots finished their work.
+        """
         try:
             nidibot_version = pkg_resources.get_distribution("nidibot").version
             logging.info("nidibot v%s was started.", nidibot_version)
@@ -146,7 +167,9 @@ class Nidibot:
 
     @staticmethod
     def initialize_folder() -> None:
-        """ """
+        """
+        Copies all required files for running nidibot as a service into current working directory.
+        """
         current_script_folder = os.path.dirname(os.path.realpath(__file__))
         current_working_folder = os.getcwd()
         shutil.copytree(
