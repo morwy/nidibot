@@ -1,5 +1,13 @@
 #!/usr/bin/env python
 
+"""
+nidibot.server_provider.nitrado_server_provider
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Components for managing Nitrado server provider.
+
+"""
+
 import glob
 import json
 import logging
@@ -28,13 +36,22 @@ from nidibot.server_provider.server_provider_base import (
 
 @dataclass
 class NitradoService:
+    """Class describing general parameters of Nitrado service."""
+
     id: str = ""
+    """The unique ID of game server. Typically is a bunch of numbers."""
+
     short_name: str = ""
+    """The name of the game in lowercase."""
+
     available_until: str = ""
+    """The date until game server is available."""
 
 
 @dataclass
 class NitradoFtpConfiguration:
+    """Class describing FTP connection parameters for Nitrado game server."""
+
     hostname: str = ""
     port: int = 21
     username: str = ""
@@ -43,6 +60,8 @@ class NitradoFtpConfiguration:
 
 @dataclass
 class NitradoMysqlConfiguration:
+    """Class describing MySQL connection parameters for Nitrado game server."""
+
     hostname: str = ""
     port: int = 21
     username: str = ""
@@ -52,14 +71,24 @@ class NitradoMysqlConfiguration:
 
 @dataclass
 class NitradoServerInformation:
+    """Class describing general parameters of Nitrado game servers."""
+
     id: str = ""
+    """The unique ID of game server. Typically is a bunch of numbers."""
+
     short_name: str = ""
+    """The name of the game in lowercase."""
+
     status: ServerStatus = field(default_factory=ServerStatus)
     ftp: NitradoFtpConfiguration = field(default_factory=NitradoFtpConfiguration)
     mysql: NitradoMysqlConfiguration = field(default_factory=NitradoMysqlConfiguration)
 
 
 class NitradoServerProvider(ServerProviderBase):
+    """
+    A server provider class for managing Nitrado game servers.
+    """
+
     def __init__(
         self,
         configuration: ServerProviderConfiguration,

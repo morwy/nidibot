@@ -1,5 +1,13 @@
 #!/usr/bin/env python
 
+"""
+nidibot.server_provider.game_server
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Components for game server management.
+
+"""
+
 from nidibot.server_provider.server_provider_base import (
     ServerProviderBase,
     ServerStatus,
@@ -26,7 +34,7 @@ class GameServer:
         States server name.
 
         Returns:
-            server_name (str)
+            str: server name
         """
         return self.__server_name
 
@@ -35,7 +43,7 @@ class GameServer:
         Returns latest server status.
 
         Returns:
-            server_status (ServerStatus): server status as a structure
+            ServerStatus: server status as a structure
         """
         return self.__server_provider.status(self.__server_id)
 
@@ -44,7 +52,7 @@ class GameServer:
         Requests server provider to start server.
 
         Returns:
-            result (bool): operation result
+            bool: operation result
         """
         return self.__server_provider.start(self.__server_id)
 
@@ -53,7 +61,7 @@ class GameServer:
         Requests server provider to stop server.
 
         Returns:
-            result (bool): operation result
+            bool: operation result
         """
         return self.__server_provider.stop(self.__server_id)
 
@@ -62,7 +70,7 @@ class GameServer:
         Requests server provider to restart server.
 
         Returns:
-            result (bool): operation result
+            bool: operation result
         """
         return self.__server_provider.restart(self.__server_id)
 
@@ -71,7 +79,7 @@ class GameServer:
         Requests server provider to create a game server backup.
 
         Returns:
-            result (bool): operation result
+            bool: operation result
         """
         return self.__server_provider.create_backup(self.__server_id)
 
@@ -80,10 +88,10 @@ class GameServer:
         Requests server provider to restore a game server backup.
 
         Parameters:
-            filepath (str): defines filepath to backup
+            `filepath` (str): defines filepath to backup
 
         Returns:
-            result (bool): operation result
+            bool: operation result
         """
         return self.__server_provider.restore_backup(self.__server_id, filepath)
 
@@ -92,6 +100,6 @@ class GameServer:
         Requests server provider to provide list of available backups.
 
         Returns:
-            backups (List[BackupDescription]): list of backups
+            List[BackupDescription]: list of backups
         """
         return self.__server_provider.list_backups(self.__server_id)

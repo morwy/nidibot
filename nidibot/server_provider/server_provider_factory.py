@@ -1,10 +1,22 @@
 #!/usr/bin/env python
 
+"""
+nidibot.server_provider.server_provider_factory
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Components for creation of server provider instances.
+
+"""
+
 from nidibot.server_provider.nitrado_server_provider import NitradoServerProvider
 from nidibot.server_provider.server_provider_base import ServerProviderConfiguration
 
 
 class ServerProviderFactory:
+    """
+    A factory class for creating server provider instances.
+    """
+
     __supported_server_providers = {
         "nitrado": NitradoServerProvider,
     }
@@ -14,7 +26,19 @@ class ServerProviderFactory:
         configuration: ServerProviderConfiguration,
         root_backup_path: str,
         notify_callback,
-    ):
+    ) -> NitradoServerProvider:
+        """
+        Creates single instance of server provider based on provided configuration.
+
+        Parameters:
+            `configuration` (ServerProviderConfiguration): configuration of server provider
+            `root_backup_path` (str): path to root backup directory
+            `notify_callback` (callback_func): callback function for notifying about changes
+
+        Returns:
+            NitradoServerProvider: created instance
+        """
+
         if configuration.type not in ServerProviderFactory.__supported_server_providers:
             if not configuration.type:
                 raise ValueError("Empty bot type provided!")
@@ -31,6 +55,18 @@ class ServerProviderFactory:
     def create_all(
         configuration_list: list, root_backup_path: str, notify_callback
     ) -> list:
+        """
+        Creates list of server provider instances based on provided configuration.
+
+        Parameters:
+            `configuration` (list): list of server provider configuration
+            `root_backup_path` (str): defines path to root backup directory
+            `notify_callback` (callback_func): callback function for notifying about changes
+
+        Returns:
+            list: list of created instances
+        """
+
         server_providers: list = []
 
         for configuration in configuration_list:
