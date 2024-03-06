@@ -26,7 +26,7 @@ class ServerProviderFactory:
         configuration: ServerProviderConfiguration,
         root_backup_path: str,
         notify_callback,
-    ) -> NitradoServerProvider:
+    ):
         """
         Creates single instance of server provider based on provided configuration.
 
@@ -36,7 +36,7 @@ class ServerProviderFactory:
             `notify_callback` (callback_func): callback function for notifying about changes
 
         Returns:
-            NitradoServerProvider: created instance
+            server_provider: created instance
         """
 
         if configuration.type not in ServerProviderFactory.__supported_server_providers:
