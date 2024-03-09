@@ -36,10 +36,10 @@ from nidibot.server_provider.server_provider_factory import ServerProviderFactor
 class GeneralConfiguration:
     """Class describing general parameters of nidibot configuration."""
 
-    backups_folder_path: str = ""
+    backups_folder_path: str = "backups"
     """The directory path in which all backups will be stored. Can be both relative or absolute."""
 
-    logs_folder_path: str = ""
+    logs_folder_path: str = "logs"
     """The directory path in which logs will be stored. Can be both relative or absolute."""
 
 
