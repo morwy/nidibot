@@ -22,6 +22,7 @@ Any contributions, bug reports and pull requests are welcome!
 
 ### Limitations
 
+* Command `/backup_restore` shows only latest 25 backups in Discord bot. This is coming from Discord limitation, it can show only 25 buttons in total (5 rows with 5 buttons each).
 * Telegram bot can not notify about game server status changes if 'allowed_channels' is empty. This is coming from Telegram API limitation.
 
 ### Commands
