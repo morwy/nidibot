@@ -354,12 +354,20 @@ class DiscordBot(BotBase):
             rows: typing.List[MessageActionRowBuilder] = []
             row = bot.rest.build_message_action_row()
 
+            rows_added = 0
             buttons_added_to_row = 0
             for backup_description in backups:
+                if rows_added >= 4:
+                    logging.warning(
+                        "Reached maximum buttons that Discord can show. Breaking."
+                    )
+                    break
+
                 if buttons_added_to_row % 5 == 0 and buttons_added_to_row != 0:
                     rows.append(row)
                     row = bot.rest.build_message_action_row()
                     buttons_added_to_row = 0
+                    rows_added += 1
 
                 row.add_interactive_button(
                     hikari.ButtonStyle.SECONDARY,
