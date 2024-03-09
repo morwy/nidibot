@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] - 2024-03-09
+
+### 🐛 Bug Fixes
+
+- *(server_provider_factory)* Removed incorrect return type.
+- *(nidibot)* Fixed incorrect import from nidibot package.
+- *(discord-bot)* Fixed crash during call of backup_restore when amount of backups was higher than 25.
+
+### 📚 Documentation
+
+- *(nidibot)* Added docstrings.
+- *(server_providers)* Added docstrings.
+- *(bots)* Added docstrings.
+- *(README.md)* Corrected mentions of package import.
+- *(README.md)* Added nidibot configuration description.
+- *(README.md)* Added information about 25 button limitation of Discord for backup_restore command.
+
+### ⚙️ Miscellaneous Tasks
+
+- *(nidibot)* Removed unused import.
+- *(nidibot)* Set default parameter values in GeneralConfiguration.
+- *(tests)* Removed redundant test files and classes.
+- *(setup.cfg)* Changed development status to Production/Stable.
+
 ## [1.2.0] - 2024-03-04
 
 ### 🐛 Bug Fixes
