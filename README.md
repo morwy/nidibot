@@ -8,13 +8,17 @@ nidibot is a simple to install and configure bot for controlling your game serve
 
 **nidibot** name was derived from **Ni**trado, **Di**scord and **bot** - game server provider and messaging platform for which this bot was written originally.
 
+It seems that only Nitrado has a good API for developers available. Any other game server provider does not provide (_pun intended_) any API at all. Some of them provide possibility of managing game server with remote console (RCON) though. RCON support would be a great addition to this project (_someday_).
+
+Any contributions, bug reports and pull requests are welcome!
+
 ### Features
 
 * A minimalistic set of fundamental commands - everything you need to run and manage your game server.
 * Possibility of connecting unlimited (somewhat) amount of game server providers and bots.
 * High extensibility for game server providers and bots - just add a new class for missing game server provider or bot and make a PR.
 * Easy setup - install ready-made nidibot package from PyPI and call `initialize_folder()`.
-* Simple configuration - everything is located in `bot_configuration.json` file in bot folder.
+* Simple configuration - everything is located in `bot_configuration.json` file in bot folder. Please see configuration description below for more details.
 
 ### Limitations
 
@@ -28,7 +32,7 @@ nidibot supports following commands:
 /status [OPTIONAL:name]
 ```
 
-Provides extended information about game server status.
+Provides extended status information about game server.
 
 ---
 
@@ -60,7 +64,7 @@ Restarts server if it is online, starts server if it is offline.
 /backup_create [OPTIONAL:name]
 ```
 
-Creates backup of games server files. Backed up files are stored in the working folder of bot under **backup** folder.
+Creates backup of games server files. Backed up files are stored in the working folder of bot under **backups** folder.
 
 ---
 
@@ -89,10 +93,10 @@ Each command supports optional argument **name**. It is a convenience argument i
 You need to have following before you proceed with the instructions:
 
 1. Virtual machine (VM) or server somewhere in the Internet.
-2. Discord account (register or login at <https://discord.com/>).
-3. Any Discord server where you have access.
+2. Bot account (Discord or Telegram one).
+3. Any Discord server or Telegram channel where you have administrative access.
 4. Nitrado account (register or login at <https://server.nitrado.net/en-GB/>).
-5. Any game server that runs on Nitrado to which you have access.
+5. Any game server that runs on Nitrado to which you have administrative access.
 
 ### Installation
 
@@ -122,8 +126,7 @@ pip install nidibot --upgrade
 python3 -c 'from nidibot import Nidibot; Nidibot.initialize_folder()'
 ```
 
-5. Following files should appear.
-6. Open **bot_configuration.json** file in any text editor and modify required values to your own:
+5. Open **bot_configuration.json** file in any text editor and modify required values to your own:
 
 ```json
 {
@@ -158,20 +161,64 @@ python3 -c 'from nidibot import Nidibot; Nidibot.initialize_folder()'
 }
 ```
 
-7. Install **nidibot** service, so it will start automatically every system restart.
+6. Install **nidibot** service, so it will start automatically every system restart.
 
 ```bash
+# Ubuntu/Linux only.
 sudo cp nidibot.service /etc/systemd/system/nidibot.service && sudo systemctl daemon-reload && sudo systemctl enable nidibot.service
 ```
 
-8. Start newly installed service:
+7. Start newly installed service:
 
 ```bash
+# Ubuntu/Linux only.
 sudo systemctl start nidibot.service
 ```
 
-9. Check service status:
+8. Check service status:
 
 ```bash
+# Ubuntu/Linux only.
 sudo systemctl status nidibot.service
 ```
+
+## Configuration description
+
+The top level of configuration contains:
+
+| Group | Description |
+| --- | --- |
+| `general` | General parameters of nidibot configuration. |
+| `bots` | List of structures describing bot configuration parameters. |
+| `server_providers` | List of structures describing game server configuration parameters. |
+
+### General
+
+| Parameter | Description |
+| --- | --- |
+| `backups_folder_path` | The directory path in which all backups will be stored. Can be both relative or absolute. Default: **"backups"**, relative to bot working directory. |
+| `logs_folder_path` | The directory path in which logs will be stored. Can be both relative or absolute. Default: **"logs"**, relative to bot working directory |
+
+### Bot configuration
+
+| Parameter | Description |
+| --- | --- |
+| `type` | The type of the bot. Allowed values: `discord`, `telegram`. Default: **empty**. |
+| `token` | The authentication token required for the bot. Default: **empty**. |
+| `privileged_users` | The list of privileged users that can call administrative commands. Default: **empty**. |
+| `allowed_channels` | The list of allowed channels from where commands will be accepted and processed. Default: **empty**. |
+| `notify_polling_seconds` | The period in seconds for forwarding messages from queue to connected channels. Default: **5**. |
+
+### Server provider configuration
+
+| Parameter | Description |
+| --- | --- |
+| `type` | The type of the server provider. Allowed values: `nitrado`. Default: **""**. |
+| `token` | The authentication token required for the server provider. Default: **""**. |
+| `timeout_seconds` | The timeout in seconds for getting a response from the server provider. Default: **10**. |
+| `polling_seconds` | The period in seconds for polling a status from the server provider. Default: **5**. |
+| `notifications / on_new_server` | Toggles notification on a new game server appearing. Default: **false**. |
+| `notifications / on_status_change` | Toggles notification on a game server status change. Default: **false**. |
+| `notifications / on_address_change` | Toggles notification on a game server IP address change. Default: **false**. |
+| `notifications / on_version_change` | Toggles notification on a game server version change. Default: **false**. |
+| `notifications / on_update_available_change` | Toggles notification if game server got an update available. Default: **false**. |
