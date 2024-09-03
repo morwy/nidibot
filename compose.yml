@@ -1,0 +1,19 @@
+name: nidibot
+services:
+  nidibot:
+    container_name: nidibot
+    image: ghcr.io/thechainercygnus/nidibot:latest
+    volumes:
+      - ./backups:/app/backups
+      - ./logs:/app/logs
+    restart: unless-stopped
+    # environment:
+    #  - NITRADO_TOKEN=nitrado_api_token
+    #   Uncomment the following to use Discord
+    #   - DISCORD_TOKEN=discord_token
+    #   - DISCORD_PRIVILEGED_USERS=user1,user2                    # Can be single or comma separated list
+    #   - DISCORD_ALLOWED_CHANNELS=channel_id_1,channel_id_2      # Can be single or comma separated list
+    #   Uncomment the following to use Telegram
+    #   - TELEGRAM_TOKEN=telegram_token
+    #   - TELEGRAM_PRIVILEGED_USERS=user1,user2                   # Can be single or comma separated list
+    #   - TELEGRAM_ALLOWED_CHANNELS=channel_id_1,channel_id_2     # Can be single or comma separated list
