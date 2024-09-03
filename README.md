@@ -101,6 +101,62 @@ You need to have following before you proceed with the instructions:
 
 ### Installation
 
+#### Docker
+
+1. Create a `compose.yml` file with the following contents:
+
+```yaml
+name: nidibot
+services:
+  nidibot:
+    container_name: nidibot
+    image: ghcr.io/thechainercygnus/nidibot:latest
+    volumes:
+      - ./backups:/app/backups
+      - ./logs:/app/logs
+    restart: unless-stopped
+    # env_file:
+    #  - .env
+    # Uncomment to set Environment Variables
+    # environment:
+    #  - NITRADO_TOKEN=nitrado_api_token
+    #   Uncomment the following to use Discord
+    #   - DISCORD_TOKEN=discord_token
+    #   - DISCORD_PRIVILEGED_USERS=user1,user2                    # Can be single or comma separated list
+    #   - DISCORD_ALLOWED_CHANNELS=channel_id_1,channel_id_2      # Can be single or comma separated list
+    #   Uncomment the following to use Telegram
+    #   - TELEGRAM_TOKEN=telegram_atoken
+    #   - TELEGRAM_PRIVILEGED_USERS=user1,user2                   # Can be single or comma separated list
+    #   - TELEGRAM_ALLOWED_CHANNELS=channel_id_1,channel_id_2     # Can be single or comma separated list
+```
+
+2. Nidibot requires a few environment variables to get up and running. Use only the necessary chat platforms (e.g. if you only need discord, only set the discord settings).
+
+|Variable|Description|Required|
+|----|----|----|
+|`NITRADO_TOKEN`|Nitrado API Token|**Yes**|
+|`DISCORD_TOKEN`|Discord Bot Token|No|
+|`DISCORD_PRIVILEGED_USERS`|Comma Separated List of Privileged Discord Usernames|No|
+|`DISCORD_ALLOWED_CHANNELS`|Comma Separated List of Allowed Channels for Nidibot to recieve commands in|No|
+|`TELEGRAM_TOKEN`|Telegram Bot Token|No|
+|`TELEGRAM_PRIVILEGED_USERS`|Comma Separated List of Privileged Telegram Usernames|No|
+|`TELEGRAM_ALLOWED_CHANNELS`|Comma Separated List of Allowed Channels for Nidibot to recieve commands in|No|
+
+3. Set required environment variables for your needs using either:
+    1. .env File method.
+        a. Delete lines 12-22 of `compose.yml`.
+        b. Uncomment the remainder of the file.
+        c. Create a file named `.env` alongside `compose.yml`.
+        d. Create the file with the needed variables besides `NITRADO_TOKEN` to connect to your services.
+    2. Set the variables in `compose.yml`.
+        a. Delete lines 10-12 of `compose.yml`.
+        b. Uncomment the remainder of the file.
+        c. Update and Delete lines as needed to configure your instance.
+4. Start the bot with `docker compose up -d`
+5. Note that it can take up to an hour for the new slash commands to register in your client. This can sometimes be worked around by completely closing and reopening your client.
+
+#### Linux Service
+
 1. Login to your VM or server via SSH.
 2. Install Python 3.x. Do this only if Python 3.x is missing or very old. You don't need to have latest Python version for this bot.
 3. Install this bot as Python package via pip:
