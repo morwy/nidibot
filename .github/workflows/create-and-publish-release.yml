@@ -6,6 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
         contents: write
+        packages: write   # Add permission to write to the container registry
     steps:
     - uses: actions/checkout@v4
       with:
@@ -80,7 +81,18 @@ jobs:
 
     - name: Build package
       run: python -m build
-  
+
+    - name: Build Docker image
+      run: |
+        docker build -t ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:v${{ steps.version.outputs.NEW_TAG_NAME }} .
+    
+    - name: Log in to GitHub Container Registry
+      run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+
+    - name: Push Docker image
+      run: |
+        docker push ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:v${{ steps.version.outputs.NEW_TAG_NAME }}
+
     - name: Create release entry
       uses: ncipollo/release-action@v1
       with:
